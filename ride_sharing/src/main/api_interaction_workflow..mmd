@@ -1,0 +1,97 @@
+sequenceDiagram
+    participant UI as Frontend UI
+    participant API as API Service Layer
+    participant AUTH as Auth Service
+    participant BACKEND as Spring Boot Backend
+    participant DB as MySQL Database
+    
+    Note over UI,DB: User Registration Flow
+    UI->>API: Register User (form data + image)
+    API->>BACKEND: POST /api/v1/auth/register
+    BACKEND->>DB: Save user + upload image
+    BACKEND-->>API: Registration response
+    API-->>UI: Show success message
+    UI->>API: Navigate to email verification
+    
+    Note over UI,DB: Email Verification
+    UI->>API: Verify email with token
+    API->>BACKEND: POST /api/v1/auth/verify-email?token=xyz
+    BACKEND->>DB: Update user.emailVerified = true
+    BACKEND-->>API: Verification success
+    API-->>UI: Account activated, redirect to login
+    
+    Note over UI,DB: Login Flow
+    UI->>API: Login credentials
+    API->>BACKEND: POST /api/v1/auth/login
+    BACKEND->>DB: Validate credentials
+    BACKEND-->>API: JWT tokens + user info
+    API->>AUTH: Store tokens in memory
+    AUTH-->>UI: Login success + user context
+    
+    Note over UI,DB: Driver Verification Flow (Drivers Only)
+    UI->>API: Submit driver verification
+    API->>AUTH: Get JWT token
+    AUTH-->>API: Bearer token
+    API->>BACKEND: POST /api/v1/driver/verify (with auth header)
+    BACKEND->>DB: Save license + vehicle info
+    BACKEND-->>API: Verification complete
+    API-->>UI: Driver verified, enable ride posting
+    
+    Note over UI,DB: Create Ride Flow (Verified Drivers)
+    UI->>API: Create new ride
+    API->>AUTH: Get JWT token
+    AUTH-->>API: Bearer token
+    API->>BACKEND: POST /api/v1/rides (with auth header)
+    BACKEND->>DB: Save ride details
+    BACKEND-->>API: Ride created successfully
+    API-->>UI: Redirect to ride list
+    
+    Note over UI,DB: Search Rides Flow (Passengers)
+    UI->>API: Search rides (source, destination, date)
+    API->>BACKEND: GET /api/v1/rides/search?source=x&destination=y&date=z
+    BACKEND->>DB: Query available rides
+    BACKEND-->>API: List of matching rides
+    API-->>UI: Display ride results
+    
+    Note over UI,DB: Book Ride Flow (Passengers)
+    UI->>API: Book selected ride
+    API->>AUTH: Get JWT token
+    AUTH-->>API: Bearer token
+    API->>BACKEND: POST /api/v1/bookings (with auth header)
+    BACKEND->>DB: Create booking + update seat availability
+    BACKEND-->>API: Booking confirmation
+    API-->>UI: Show booking success
+    
+    Note over UI,DB: View Dashboard Flow
+    UI->>API: Load user dashboard
+    API->>AUTH: Get JWT token
+    AUTH-->>API: Bearer token
+    API->>BACKEND: GET /api/v1/user/dashboard (with auth header)
+    BACKEND->>DB: Fetch user stats + recent activity
+    BACKEND-->>API: Dashboard data
+    API-->>UI: Render dashboard components
+    
+    Note over UI,DB: Token Refresh Flow
+    AUTH->>API: Token expired detected
+    API->>BACKEND: POST /api/v1/auth/refresh-token
+    BACKEND-->>API: New access token
+    API->>AUTH: Update stored tokens
+    API-->>UI: Retry original request
+    
+    Note over UI,DB: Error Handling Flow
+    UI->>API: Any API request
+    API->>BACKEND: HTTP request
+    BACKEND-->>API: 400/401/403/500 error
+    API-->>UI: Show appropriate error message
+    
+    Note over UI,DB: Logout Flow
+    UI->>API: User logout
+    API->>AUTH: Clear stored tokens
+    AUTH-->>UI: Redirect to login page
+    
+    %% Styling
+    Note over UI: React/Vue/Angular Frontend
+    Note over API: Axios/Fetch API Layer
+    Note over AUTH: JWT Token Management
+    Note over BACKEND: Spring Boot REST API
+    Note over DB: MySQL with JPA/Hibernate
