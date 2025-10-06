@@ -5,6 +5,7 @@ import com.example.demo.dto.BookingRequest;
 import com.example.demo.entity.Ride;
 import com.example.demo.entity.Booking;
 import com.example.demo.entity.User;
+import com.example.demo.enums.BookingStatus;
 import com.example.demo.repository.RideRepository;
 import com.example.demo.repository.BookingRepository;
 import com.example.demo.repository.UserRepository;
@@ -13,7 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -28,13 +29,15 @@ public class RideService {
     @Autowired
     private UserRepository userRepository;
 
-    // Driver posts a new ride
+    // ---------------- POST RIDE ----------------
     @Transactional
-    public Ride postRide(RideRequest request, String driverEmail) {
-        User driver = userRepository.findByEmail(driverEmail)
-                .orElseThrow(() -> new RuntimeException("Driver not found"));
+    public Ride postRide(RideRequest request, String driverIdentifier) {
+        // Find driver by email or username
+        User driver = userRepository.findByEmail(driverIdentifier)
+                .orElseGet(() -> userRepository.findByUsername(driverIdentifier)
+                        .orElseThrow(() -> new RuntimeException("Driver not found")));
 
-        if (!driver.getRole().name().equals("DRIVER")) {
+        if (!(driver.getRole().name().equals("DRIVER") || driver.getRole().name().equals("BOTH"))) {
             throw new RuntimeException("Only drivers can post rides");
         }
 
@@ -54,44 +57,42 @@ public class RideService {
         return rideRepository.save(ride);
     }
 
-    // Search rides by source, destination, and date
-    public List<Ride> searchRides(String source, String destination, LocalDate date) {
-        if (source != null && destination != null && date != null) {
-            return rideRepository.findBySourceAndDestinationAndDateAndStatus(
-                    source, destination, date, "ACTIVE");
-        } else if (source != null && destination != null) {
-            return rideRepository.findBySourceAndDestinationAndStatus(
-                    source, destination, "ACTIVE");
+    // ---------------- SEARCH RIDES ----------------
+    public List<Ride> searchRides(String source, String destination, LocalDate date, Integer seats) {
+        if (source != null && destination != null && date != null && seats != null) {
+            return rideRepository.searchRides(source, destination, date, seats);
+        } else if (source != null && destination != null && seats != null) {
+            return rideRepository.searchRidesFlexible(source, destination, seats);
         } else {
-            return rideRepository.findByStatus("ACTIVE");
+            return rideRepository.findAllActiveRides();
         }
     }
 
-    // Get ride details by ID
+    // ---------------- GET RIDE BY ID ----------------
     public Ride getRideById(Long rideId) {
         return rideRepository.findById(rideId)
                 .orElseThrow(() -> new RuntimeException("Ride not found"));
     }
 
-    // Book a ride
+    // ---------------- BOOK RIDE ----------------
     @Transactional
-    public Booking bookRide(Long rideId, BookingRequest request, String passengerEmail) {
-        User passenger = userRepository.findByEmail(passengerEmail)
-                .orElseThrow(() -> new RuntimeException("Passenger not found"));
+    public Booking bookRide(Long rideId, BookingRequest request, String passengerIdentifier) {
+        // Find passenger by email or username
+        User passenger = userRepository.findByEmail(passengerIdentifier)
+                .orElseGet(() -> userRepository.findByUsername(passengerIdentifier)
+                        .orElseThrow(() -> new RuntimeException("Passenger not found")));
 
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> new RuntimeException("Ride not found"));
 
-        // Validation
         if (ride.getAvailableSeats() < request.getSeatsBooked()) {
             throw new RuntimeException("Not enough seats available");
         }
 
         if (ride.getDriver().getId().equals(passenger.getId())) {
-            throw new RuntimeException("Driver cannot book their own ride");
+            throw new RuntimeException("Driver cannot book own ride");
         }
 
-        // Create booking
         Booking booking = new Booking();
         booking.setRide(ride);
         booking.setPassenger(passenger);
@@ -99,57 +100,56 @@ public class RideService {
         booking.setPickupLocation(request.getPickupLocation());
         booking.setDropLocation(request.getDropLocation());
 
-        // Calculate fare (basic calculation)
-        double distance = request.getDistance() != null ? request.getDistance() : 50.0;
-        double fare = distance * ride.getPricePerKm() * request.getSeatsBooked();
+        double fare = (request.getDistance() != null ? request.getDistance() : 50.0)
+                * ride.getPricePerKm()
+                * request.getSeatsBooked();
         booking.setFare(fare);
-        booking.setStatus("CONFIRMED");
+        booking.setStatus(BookingStatus.CONFIRMED);
 
-        // Update available seats
         ride.setAvailableSeats(ride.getAvailableSeats() - request.getSeatsBooked());
-        if (ride.getAvailableSeats() == 0) {
-            ride.setStatus("FULL");
-        }
+        if (ride.getAvailableSeats() == 0) ride.setStatus("FULL");
         rideRepository.save(ride);
 
         return bookingRepository.save(booking);
     }
 
-    // Get driver's posted rides
-    public List<Ride> getDriverRides(String driverEmail) {
-        User driver = userRepository.findByEmail(driverEmail)
-                .orElseThrow(() -> new RuntimeException("Driver not found"));
+    // ---------------- DRIVER RIDES ----------------
+    public List<Ride> getDriverRides(String driverIdentifier) {
+        User driver = userRepository.findByEmail(driverIdentifier)
+                .orElseGet(() -> userRepository.findByUsername(driverIdentifier)
+                        .orElseThrow(() -> new RuntimeException("Driver not found")));
         return rideRepository.findByDriverId(driver.getId());
     }
 
-    // Get passenger's bookings
-    public List<Booking> getPassengerBookings(String passengerEmail) {
-        User passenger = userRepository.findByEmail(passengerEmail)
-                .orElseThrow(() -> new RuntimeException("Passenger not found"));
+    // ---------------- PASSENGER BOOKINGS ----------------
+    public List<Booking> getPassengerBookings(String passengerIdentifier) {
+        User passenger = userRepository.findByEmail(passengerIdentifier)
+                .orElseGet(() -> userRepository.findByUsername(passengerIdentifier)
+                        .orElseThrow(() -> new RuntimeException("Passenger not found")));
         return bookingRepository.findByPassengerId(passenger.getId());
     }
 
-    // Cancel booking
+    // ---------------- CANCEL BOOKING ----------------
     @Transactional
-    public void cancelBooking(Long bookingId, String userEmail) {
+    public void cancelBooking(Long bookingId, String userIdentifier) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
 
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findByEmail(userIdentifier)
+                .orElseGet(() -> userRepository.findByUsername(userIdentifier)
+                        .orElseThrow(() -> new RuntimeException("User not found")));
 
         if (!booking.getPassenger().getId().equals(user.getId())) {
             throw new RuntimeException("Unauthorized to cancel this booking");
         }
 
-        // Restore seats
         Ride ride = booking.getRide();
         ride.setAvailableSeats(ride.getAvailableSeats() + booking.getSeatsBooked());
         ride.setStatus("ACTIVE");
         rideRepository.save(ride);
 
-
-        booking.setStatus("CANCELLED");
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancelledAt(LocalDateTime.now());
         bookingRepository.save(booking);
     }
 }

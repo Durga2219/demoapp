@@ -1,24 +1,9 @@
 package com.example.demo.enums;
 
 public enum RideStatus {
-    ACTIVE("Active"),
-    FULL("Full"),
-    COMPLETED("Completed"),
-    CANCELLED("Cancelled"),
-    IN_PROGRESS("In Progress");
-
-    private final String displayName;
-
-    RideStatus(String displayName) {
-        this.displayName = displayName;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    @Override
-    public String toString() {
-        return displayName;
-    }
+    ACTIVE,       // Ride is available for booking
+    FULL,         // All seats are booked
+    COMPLETED,    // Ride has been completed
+    CANCELLED,    // Ride was cancelled by driver
+    IN_PROGRESS   // Ride is currently happening
 }

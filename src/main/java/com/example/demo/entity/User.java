@@ -1,160 +1,133 @@
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.example.demo.enums.Role;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 @Entity
 @Table(name = "users")
-public class User {
+public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, nullable = false)
+    private String username;
+
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
+    @JsonIgnore
     private String password;
 
-    @Column(nullable = false)
     private String phone;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role role; // DRIVER or PASSENGER
+    private Role role = Role.PASSENGER;
 
-    // Driver-specific fields
-    @Column(name = "vehicle_model")
     private String vehicleModel;
-
-    @Column(name = "vehicle_plate")
     private String vehiclePlate;
-
-    @Column(name = "vehicle_capacity")
     private Integer vehicleCapacity;
 
-    @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnoreProperties("driver")
+    private Double rating = 0.0;
+    private Integer totalRides = 0;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Ride> rides;
 
-    @OneToMany(mappedBy = "passenger", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnoreProperties("passenger")
+    @OneToMany(mappedBy = "passenger", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Booking> bookings;
 
-    // Constructors
-    public User() {}
+    @Column(nullable = false)
+    private Boolean enabled = true;
 
-    public User(String name, String email, String password, String phone, Role role) {
-        this.name = name;
-        this.email = email;
-        this.password = password;
-        this.phone = phone;
-        this.role = role;
+    @Column(nullable = false)
+    private Boolean accountNonLocked = true;
+
+    // -------------------- TIMESTAMPS --------------------
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
 
-    // Getters and Setters
-    public Long getId() {
-        return id;
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public Role getRole() {
-        return role;
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
-    }
-
-    public String getVehicleModel() {
-        return vehicleModel;
-    }
-
-    public void setVehicleModel(String vehicleModel) {
-        this.vehicleModel = vehicleModel;
-    }
-
-    public String getVehiclePlate() {
-        return vehiclePlate;
-    }
-
-    public void setVehiclePlate(String vehiclePlate) {
-        this.vehiclePlate = vehiclePlate;
-    }
-
-    public Integer getVehicleCapacity() {
-        return vehicleCapacity;
-    }
-
-    public void setVehicleCapacity(Integer vehicleCapacity) {
-        this.vehicleCapacity = vehicleCapacity;
-    }
-
-    public List<Ride> getRides() {
-        return rides;
-    }
-
-    public void setRides(List<Ride> rides) {
-        this.rides = rides;
-    }
-
-    public List<Booking> getBookings() {
-        return bookings;
-    }
-
-    public void setBookings(List<Booking> bookings) {
-        this.bookings = bookings;
-    }
-
+    // -------------------- UserDetails --------------------
     @Override
-    public String toString() {
-        return "User{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", email='" + email + '\'' +
-                ", phone='" + phone + '\'' +
-                ", role=" + role +
-                '}';
+    @JsonIgnore
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
+
+    @Override @JsonIgnore
+    public boolean isAccountNonExpired() { return true; }
+
+    @Override @JsonIgnore
+    public boolean isAccountNonLocked() { return accountNonLocked; }
+
+    @Override @JsonIgnore
+    public boolean isCredentialsNonExpired() { return true; }
+
+    @Override @JsonIgnore
+    public boolean isEnabled() { return enabled; }
+
+    // -------------------- Getters & Setters --------------------
+    public Long getId() { return id; }
+    public String getUsername() { return username; }
+    public String getName() { return name; }
+    public String getEmail() { return email; }
+    public String getPassword() { return password; }
+    public String getPhone() { return phone; }
+    public Role getRole() { return role; }
+    public String getVehicleModel() { return vehicleModel; }
+    public String getVehiclePlate() { return vehiclePlate; }
+    public Integer getVehicleCapacity() { return vehicleCapacity; }
+    public Double getRating() { return rating; }
+    public Integer getTotalRides() { return totalRides; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Boolean getEnabled() { return enabled; }
+    public Boolean getAccountNonLocked() { return accountNonLocked; }
+
+    public void setId(Long id) { this.id = id; }
+    public void setUsername(String username) { this.username = username; }
+    public void setName(String name) { this.name = name; }
+    public void setEmail(String email) { this.email = email; }
+    public void setPassword(String password) { this.password = password; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public void setRole(Role role) { this.role = role; }
+    public void setVehicleModel(String vehicleModel) { this.vehicleModel = vehicleModel; }
+    public void setVehiclePlate(String vehiclePlate) { this.vehiclePlate = vehiclePlate; }
+    public void setVehicleCapacity(Integer vehicleCapacity) { this.vehicleCapacity = vehicleCapacity; }
+    public void setRating(Double rating) { this.rating = rating; }
+    public void setTotalRides(Integer totalRides) { this.totalRides = totalRides; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public void setEnabled(Boolean enabled) { this.enabled = enabled; }
+    public void setAccountNonLocked(Boolean accountNonLocked) { this.accountNonLocked = accountNonLocked; }
 }

@@ -9,18 +9,33 @@ import java.util.List;
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
-    // Find bookings by passenger ID
+    // ---------------- PASSENGER QUERIES ----------------
+
+    // Find all bookings by passenger
     List<Booking> findByPassengerId(Long passengerId);
 
-    // Find bookings by ride ID
-    List<Booking> findByRideId(Long rideId);
-
-    // Find bookings by status
-    List<Booking> findByStatus(String status);
-
-    // Find bookings by passenger ID and status
+    // Find bookings by passenger and status
     List<Booking> findByPassengerIdAndStatus(Long passengerId, String status);
 
-    // Find bookings by ride ID and status
+    // Count bookings by passenger
+    long countByPassengerId(Long passengerId);
+
+    // ---------------- RIDE QUERIES ----------------
+
+    // Find all bookings for a ride
+    List<Booking> findByRideId(Long rideId);
+
+    // Find bookings for a ride by status
     List<Booking> findByRideIdAndStatus(Long rideId, String status);
+
+    // Find bookings with multiple statuses for a ride (e.g., ACTIVE, CONFIRMED)
+    List<Booking> findByRideIdAndStatusIn(Long rideId, List<String> statuses);
+
+    // Count bookings for a ride
+    long countByRideId(Long rideId);
+
+    // ---------------- EXISTENCE CHECK ----------------
+
+    // Check if passenger already has an active booking for a ride
+    boolean existsByPassengerIdAndRideIdAndStatus(Long passengerId, Long rideId, String status);
 }

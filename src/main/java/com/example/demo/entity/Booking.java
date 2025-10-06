@@ -1,126 +1,53 @@
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.example.demo.enums.BookingStatus;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "bookings")
 public class Booking {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne
     @JoinColumn(name = "ride_id", nullable = false)
-    @JsonIgnoreProperties({"bookings", "driver"})
     private Ride ride;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne
     @JoinColumn(name = "passenger_id", nullable = false)
-    @JsonIgnoreProperties({"bookings", "rides"})
     private User passenger;
 
-    @Column(nullable = false)
     private Integer seatsBooked;
-
-    @Column(name = "pickup_location")
     private String pickupLocation;
-
-    @Column(name = "drop_location")
     private String dropLocation;
-
-    @Column(nullable = false)
     private Double fare;
 
-    @Column(nullable = false, length = 20)
-    private String status = "CONFIRMED"; // CONFIRMED, CANCELLED, COMPLETED
+    @Enumerated(EnumType.STRING)
+    private BookingStatus status;
 
-    // Constructors
-    public Booking() {}
+    private LocalDateTime bookedAt = LocalDateTime.now();
+    private LocalDateTime cancelledAt;
 
-    public Booking(Ride ride, User passenger, Integer seatsBooked,
-                   String pickupLocation, String dropLocation, Double fare) {
-        this.ride = ride;
-        this.passenger = passenger;
-        this.seatsBooked = seatsBooked;
-        this.pickupLocation = pickupLocation;
-        this.dropLocation = dropLocation;
-        this.fare = fare;
-    }
+    // Getters & Setters
+    public Long getId() { return id; }
+    public Ride getRide() { return ride; }
+    public User getPassenger() { return passenger; }
+    public Integer getSeatsBooked() { return seatsBooked; }
+    public String getPickupLocation() { return pickupLocation; }
+    public String getDropLocation() { return dropLocation; }
+    public Double getFare() { return fare; }
+    public BookingStatus getStatus() { return status; }
+    public LocalDateTime getBookedAt() { return bookedAt; }
+    public LocalDateTime getCancelledAt() { return cancelledAt; }
 
-    // Getters and Setters
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Ride getRide() {
-        return ride;
-    }
-
-    public void setRide(Ride ride) {
-        this.ride = ride;
-    }
-
-    public User getPassenger() {
-        return passenger;
-    }
-
-    public void setPassenger(User passenger) {
-        this.passenger = passenger;
-    }
-
-    public Integer getSeatsBooked() {
-        return seatsBooked;
-    }
-
-    public void setSeatsBooked(Integer seatsBooked) {
-        this.seatsBooked = seatsBooked;
-    }
-
-    public String getPickupLocation() {
-        return pickupLocation;
-    }
-
-    public void setPickupLocation(String pickupLocation) {
-        this.pickupLocation = pickupLocation;
-    }
-
-    public String getDropLocation() {
-        return dropLocation;
-    }
-
-    public void setDropLocation(String dropLocation) {
-        this.dropLocation = dropLocation;
-    }
-
-    public Double getFare() {
-        return fare;
-    }
-
-    public void setFare(Double fare) {
-        this.fare = fare;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    @Override
-    public String toString() {
-        return "Booking{" +
-                "id=" + id +
-                ", seatsBooked=" + seatsBooked +
-                ", fare=" + fare +
-                ", status='" + status + '\'' +
-                '}';
-    }
+    public void setRide(Ride ride) { this.ride = ride; }
+    public void setPassenger(User passenger) { this.passenger = passenger; }
+    public void setSeatsBooked(Integer seatsBooked) { this.seatsBooked = seatsBooked; }
+    public void setPickupLocation(String pickup) { this.pickupLocation = pickup; }
+    public void setDropLocation(String drop) { this.dropLocation = drop; }
+    public void setFare(Double fare) { this.fare = fare; }
+    public void setStatus(BookingStatus status) { this.status = status; }
+    public void setCancelledAt(LocalDateTime cancelledAt) { this.cancelledAt = cancelledAt; }
 }

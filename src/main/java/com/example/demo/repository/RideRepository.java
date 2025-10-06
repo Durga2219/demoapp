@@ -2,41 +2,54 @@ package com.example.demo.repository;
 
 import com.example.demo.entity.Ride;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RideRepository extends JpaRepository<Ride, Long> {
 
-    // Find rides by driver ID
+    // ---------------- DRIVER QUERIES ----------------
     List<Ride> findByDriverId(Long driverId);
 
-    // Find rides by status
-    List<Ride> findByStatus(String status);
+    List<Ride> findByDriverIdAndStatusOrderByDateAscTimeAsc(Long driverId, String status);
 
-    // Find rides by source, destination, date and status
-    List<Ride> findBySourceAndDestinationAndDateAndStatus(
-            String source,
-            String destination,
-            LocalDate date,
-            String status
-    );
+    @Query("SELECT r FROM Ride r WHERE r.driver.id = :driverId AND r.date >= :date ORDER BY r.date, r.time")
+    List<Ride> findDriverUpcomingRides(@Param("driverId") Long driverId, @Param("date") LocalDate date);
 
-    // Find rides by source, destination and status (without date)
-    List<Ride> findBySourceAndDestinationAndStatus(
-            String source,
-            String destination,
-            String status
-    );
+    @Query("SELECT r FROM Ride r WHERE r.driver.id = :driverId AND r.date < :date ORDER BY r.date DESC, r.time DESC")
+    List<Ride> findDriverPastRides(@Param("driverId") Long driverId, @Param("date") LocalDate date);
 
-    // Find rides by source and status
-    List<Ride> findBySourceAndStatus(String source, String status);
+    @Query("SELECT r FROM Ride r WHERE r.driver.id = :driverId AND r.date = :date AND r.time = :time AND r.status = 'ACTIVE'")
+    Optional<Ride> findConflictingRide(@Param("driverId") Long driverId,
+                                       @Param("date") LocalDate date,
+                                       @Param("time") java.time.LocalTime time);
 
-    // Find rides by destination and status
-    List<Ride> findByDestinationAndStatus(String destination, String status);
+    // ---------------- SEARCH QUERIES ----------------
+    @Query("SELECT r FROM Ride r WHERE " +
+           "LOWER(r.source) LIKE LOWER(CONCAT('%', :source, '%')) AND " +
+           "LOWER(r.destination) LIKE LOWER(CONCAT('%', :destination, '%')) AND " +
+           "r.date = :date AND r.status = 'ACTIVE' AND r.availableSeats >= :seats " +
+           "ORDER BY r.date, r.time")
+    List<Ride> searchRides(@Param("source") String source,
+                           @Param("destination") String destination,
+                           @Param("date") LocalDate date,
+                           @Param("seats") Integer seats);
 
-    // Find rides by date and status
-    List<Ride> findByDateAndStatus(LocalDate date, String status);
+    @Query("SELECT r FROM Ride r WHERE " +
+           "LOWER(r.source) LIKE LOWER(CONCAT('%', :source, '%')) AND " +
+           "LOWER(r.destination) LIKE LOWER(CONCAT('%', :destination, '%')) AND " +
+           "r.status = 'ACTIVE' AND r.availableSeats >= :seats " +
+           "ORDER BY r.date, r.time")
+    List<Ride> searchRidesFlexible(@Param("source") String source,
+                                   @Param("destination") String destination,
+                                   @Param("seats") Integer seats);
+
+    // ---------------- ACTIVE RIDES ----------------
+    @Query("SELECT r FROM Ride r WHERE r.status = 'ACTIVE' ORDER BY r.date, r.time")
+    List<Ride> findAllActiveRides();
 }
