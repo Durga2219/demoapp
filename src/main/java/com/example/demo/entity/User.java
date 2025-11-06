@@ -35,6 +35,9 @@ public class User implements UserDetails {
 
     private String phone;
 
+    @Column(columnDefinition = "LONGTEXT")
+    private String profilePicture;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.PASSENGER;
@@ -45,6 +48,13 @@ public class User implements UserDetails {
 
     private Double rating = 0.0;
     private Integer totalRides = 0;
+
+    // Admin management fields
+    private Boolean blocked = false;
+    private String blockReason;
+    private LocalDateTime blockedAt;
+    private Boolean driverVerified = false;
+    private LocalDateTime verifiedAt;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -65,7 +75,6 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private Boolean accountNonLocked = true;
 
-    // -------------------- TIMESTAMPS --------------------
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -77,7 +86,6 @@ public class User implements UserDetails {
         this.updatedAt = LocalDateTime.now();
     }
 
-    // -------------------- UserDetails --------------------
     @Override
     @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -96,7 +104,6 @@ public class User implements UserDetails {
     @Override @JsonIgnore
     public boolean isEnabled() { return enabled; }
 
-    // -------------------- Getters & Setters --------------------
     public Long getId() { return id; }
     public String getUsername() { return username; }
     public String getName() { return name; }
@@ -113,6 +120,7 @@ public class User implements UserDetails {
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public Boolean getEnabled() { return enabled; }
     public Boolean getAccountNonLocked() { return accountNonLocked; }
+    public String getProfilePicture() { return profilePicture; }
 
     public void setId(Long id) { this.id = id; }
     public void setUsername(String username) { this.username = username; }
@@ -130,4 +138,17 @@ public class User implements UserDetails {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public void setEnabled(Boolean enabled) { this.enabled = enabled; }
     public void setAccountNonLocked(Boolean accountNonLocked) { this.accountNonLocked = accountNonLocked; }
+    public void setProfilePicture(String profilePicture) { this.profilePicture = profilePicture; }
+    
+    // Admin management getters and setters
+    public Boolean getBlocked() { return blocked; }
+    public void setBlocked(Boolean blocked) { this.blocked = blocked; }
+    public String getBlockReason() { return blockReason; }
+    public void setBlockReason(String blockReason) { this.blockReason = blockReason; }
+    public LocalDateTime getBlockedAt() { return blockedAt; }
+    public void setBlockedAt(LocalDateTime blockedAt) { this.blockedAt = blockedAt; }
+    public Boolean getDriverVerified() { return driverVerified; }
+    public void setDriverVerified(Boolean driverVerified) { this.driverVerified = driverVerified; }
+    public LocalDateTime getVerifiedAt() { return verifiedAt; }
+    public void setVerifiedAt(LocalDateTime verifiedAt) { this.verifiedAt = verifiedAt; }
 }

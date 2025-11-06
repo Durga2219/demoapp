@@ -1,0 +1,4030 @@
+﻿﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RideConnect - Driver Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- WebSocket Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #00674F 0%, #3EBB9E 100%);
+            padding: 15px 30px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-info {
+            color: #FFFFFF;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: #FFFFFF;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* Notification Bell */
+        .notification-bell {
+            position: relative;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .notification-bell:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .notification-bell i {
+            font-size: 20px;
+            color: #FFFFFF;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* Notification Dropdown */
+        .notification-dropdown {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            width: 350px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            border: 1px solid #3EBB9E;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .notification-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .notification-header {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .notification-header h3 {
+            color: #00674F;
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .mark-all-read {
+            background: #3EBB9E;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mark-all-read:hover {
+            background: #73E6CB;
+            transform: translateY(-1px);
+        }
+
+        .notification-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .notification-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .notification-item:hover {
+            background: #f8f9fa;
+        }
+
+        .notification-item.unread {
+            background: rgba(62, 187, 158, 0.05);
+            border-left: 4px solid #3EBB9E;
+        }
+
+        .notification-title {
+            color: #00674F;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .notification-message {
+            color: #666;
+            font-size: 13px;
+            line-height: 1.4;
+            margin-bottom: 5px;
+        }
+
+        .notification-time {
+            color: #3EBB9E;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .no-notifications {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .no-notifications i {
+            font-size: 48px;
+            color: #ddd;
+            margin-bottom: 15px;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            min-height: calc(100vh - 70px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: #FFFFFF;
+            box-shadow: 2px 0 15px rgba(0, 0, 0, 0.1);
+            padding: 0;
+            position: relative;
+        }
+
+        .sidebar-header {
+            padding: 30px 25px;
+            border-bottom: 2px solid #f0f0f0;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .sidebar-header h2 {
+            color: #00674F;
+            font-size: 20px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-nav {
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 18px 25px;
+            color: #666;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #00674F;
+            border-left-color: #3EBB9E;
+            transform: translateX(5px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+            color: #00674F;
+            border-left-color: #3EBB9E;
+            font-weight: 600;
+        }
+
+        .nav-item i {
+            font-size: 18px;
+            width: 20px;
+            color: #3EBB9E;
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            background: #f5f7fa;
+            overflow-y: auto;
+        }
+
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-header {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-header h2 {
+            color: #00674F;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0;
+        }
+
+        /* Cards */
+        .welcome-card,
+        .create-ride-card,
+        .rides-card,
+        .wallet-card {
+            background: #FFFFFF;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+            border: 1px solid #e9ecef;
+        }
+
+        /* Welcome Section */
+        .welcome-card {
+            text-align: center;
+            background: linear-gradient(135deg, #FFFFFF 0%, #f8f9fa 100%);
+        }
+
+        .welcome-card h1 {
+            color: #00674F;
+            margin-bottom: 15px;
+            font-size: 32px;
+        }
+
+        .welcome-card p {
+            color: #666;
+            font-size: 18px;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .status-message {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            color: #0c5460;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            border: 1px solid #b6d7dc;
+            font-weight: 500;
+        }
+
+        .status-message.success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+
+        .status-message.error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+
+        .driver-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid #3EBB9E;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(62, 187, 158, 0.2);
+            border-color: #00674F;
+        }
+
+        .stat-card i {
+            font-size: 36px;
+            color: #3EBB9E;
+            margin-bottom: 15px;
+        }
+
+        .stat-card h3 {
+            color: #00674F;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .stat-card p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* Create Ride Form */
+        .create-ride-card h3 {
+            color: #00674F;
+            margin-bottom: 25px;
+            font-size: 22px;
+        }
+
+        .ride-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #00674F;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #FFFFFF;
+            color: #333;
+        }
+
+        .time-picker {
+            display: flex;
+            gap: 10px;
+        }
+
+        .time-picker select {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #FFFFFF;
+            color: #333;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3EBB9E;
+            box-shadow: 0 0 0 3px rgba(62, 187, 158, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .create-ride-btn {
+            background: linear-gradient(135deg, #3EBB9E 0%, #73E6CB 100%);
+            color: #FFFFFF;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .create-ride-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(62, 187, 158, 0.3);
+        }
+
+        .create-ride-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Rides List */
+        .rides-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .ride-card {
+            background: #FFFFFF;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .ride-card:hover {
+            border-color: #3EBB9E;
+            box-shadow: 0 5px 15px rgba(62, 187, 158, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .ride-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .ride-info h4 {
+            color: #00674F;
+            margin: 0 0 8px 0;
+            font-size: 18px;
+        }
+
+        .ride-info p {
+            color: #666;
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .ride-status {
+            text-align: right;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .status-badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.completed {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-badge.cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .ride-price {
+            font-size: 20px;
+            font-weight: bold;
+            color: #3EBB9E;
+        }
+
+        .ride-details {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .detail-item i {
+            color: #3EBB9E;
+            width: 16px;
+        }
+
+        .ride-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-edit {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-edit:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+        }
+
+        .btn-cancel {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        /* Wallet Styles */
+        .wallet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .wallet-header h3 {
+            color: #00674F;
+            font-size: 20px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .balance-display {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .current-balance {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .balance-label {
+            color: #666;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .balance-amount {
+            font-size: 48px;
+            font-weight: bold;
+            color: #3EBB9E;
+            text-shadow: 0 2px 4px rgba(62, 187, 158, 0.2);
+        }
+
+        .wallet-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .wallet-stat {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .wallet-stat:hover {
+            border-color: #3EBB9E;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(62, 187, 158, 0.1);
+        }
+
+        .wallet-stat i {
+            font-size: 24px;
+            color: #3EBB9E;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(62, 187, 158, 0.1);
+            border-radius: 50%;
+        }
+
+        .stat-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #00674F;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .wallet-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .withdraw-btn {
+            background: linear-gradient(135deg, #3EBB9E, #73E6CB);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .withdraw-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(62, 187, 158, 0.3);
+        }
+
+        .withdraw-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .transaction-filters {
+            display: flex;
+            gap: 10px;
+        }
+
+        .transaction-filters select {
+            padding: 8px 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            background: white;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.3s ease;
+        }
+
+        .transaction-item:hover {
+            background: #f8f9fa;
+        }
+
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+
+        .transaction-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .transaction-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: white;
+        }
+
+        .transaction-icon.credit {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .transaction-icon.withdrawal {
+            background: linear-gradient(135deg, #dc3545, #fd7e14);
+        }
+
+        .transaction-details h4 {
+            color: #00674F;
+            margin: 0 0 5px 0;
+            font-size: 16px;
+        }
+
+        .transaction-details p {
+            color: #666;
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .transaction-amount {
+            text-align: right;
+        }
+
+        .amount {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .amount.credit {
+            color: #28a745;
+        }
+
+        .amount.withdrawal {
+            color: #dc3545;
+        }
+
+        .transaction-time {
+            color: #666;
+            font-size: 12px;
+        }
+
+        /* Withdraw Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: #FFFFFF;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            color: #333;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+            background: none;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .modal-title {
+            color: #00674F;
+            margin-bottom: 25px;
+            font-size: 22px;
+        }
+
+        .withdraw-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #00674F;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #FFFFFF;
+            color: #333;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3EBB9E;
+            box-shadow: 0 0 0 3px rgba(62, 187, 158, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .withdraw-summary {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #3EBB9E;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+
+        .summary-row.total {
+            font-weight: bold;
+            font-size: 18px;
+            color: #00674F;
+            border-top: 2px solid #3EBB9E;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+
+        .confirm-withdraw-btn {
+            background: linear-gradient(135deg, #3EBB9E, #73E6CB);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .confirm-withdraw-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(62, 187, 158, 0.3);
+        }
+
+        .confirm-withdraw-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h4 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 20px;
+        }
+
+        .empty-state p {
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        /* Enhanced Profile Settings Styles */
+        .profile-settings-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Fix content area for profile settings */
+        #section-profile {
+            width: 100%;
+            max-width: none;
+            overflow-x: hidden;
+        }
+
+        #section-profile .content-area {
+            width: 100%;
+            padding: 0;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .profile-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0, 103, 79, 0.1);
+            border: 1px solid #e8f5f0;
+            transition: all 0.3s ease;
+        }
+
+        .profile-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 103, 79, 0.15);
+        }
+
+        .profile-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f9f6;
+        }
+
+        .profile-card-header h3 {
+            color: #00674F;
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .profile-card-header i {
+            font-size: 24px;
+            color: #3EBB9E;
+            background: linear-gradient(135deg, #3EBB9E, #73E6CB);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .profile-form {
+            padding: 0;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .form-row.single {
+            grid-template-columns: 1fr;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #00674F;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group label i {
+            color: #3EBB9E;
+            font-size: 16px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 15px 20px;
+            border: 2px solid #e8f5f0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #fafffe;
+            color: #333;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3EBB9E;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(62, 187, 158, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .form-group input[readonly] {
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+            color: #6c757d;
+            border-color: #dee2e6;
+        }
+
+        .form-group small {
+            margin-top: 8px;
+            color: #6c757d;
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .profile-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-start;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #f0f9f6;
+        }
+
+        .profile-picture-section {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .profile-picture-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 25px;
+        }
+
+        .profile-picture-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 4px solid #3EBB9E;
+            box-shadow: 0 8px 25px rgba(62, 187, 158, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .profile-picture-avatar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 35px rgba(62, 187, 158, 0.4);
+        }
+
+        .profile-picture-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .profile-picture-avatar span {
+            font-size: 60px;
+            font-weight: bold;
+            color: #3EBB9E;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .profile-picture-overlay {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #3EBB9E, #73E6CB);
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid white;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(62, 187, 158, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .profile-picture-overlay:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(62, 187, 158, 0.6);
+        }
+
+        .profile-picture-overlay i {
+            color: white;
+            font-size: 18px;
+        }
+
+        .profile-picture-text {
+            color: #6c757d;
+            font-size: 16px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .profile-picture-hint {
+            color: #9ca3af;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .enhanced-btn {
+            background: linear-gradient(135deg, #3EBB9E, #73E6CB);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(62, 187, 158, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .enhanced-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(62, 187, 158, 0.4);
+            background: linear-gradient(135deg, #2a9d8f, #3EBB9E);
+        }
+
+        .enhanced-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .enhanced-btn.secondary {
+            background: linear-gradient(135deg, #6c757d, #495057);
+        }
+
+        .enhanced-btn.secondary:hover {
+            background: linear-gradient(135deg, #495057, #343a40);
+        }
+
+        .enhanced-btn.danger {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+        }
+
+        .enhanced-btn.danger:hover {
+            background: linear-gradient(135deg, #c82333, #a71e2a);
+        }
+
+        .enhanced-btn.warning {
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            color: #212529;
+        }
+
+        .enhanced-btn.warning:hover {
+            background: linear-gradient(135deg, #e0a800, #d39e00);
+        }
+
+        .status-message {
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-message.success {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-message.error {
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-message.info {
+            background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .profile-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .profile-card {
+                padding: 20px;
+            }
+
+            .profile-picture-avatar {
+                width: 120px;
+                height: 120px;
+            }
+
+            .profile-picture-avatar span {
+                font-size: 48px;
+            }
+
+            .profile-actions {
+                flex-direction: column;
+            }
+
+            .enhanced-btn {
+                justify-content: center;
+            }
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3EBB9E;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            }
+
+            .sidebar-nav {
+                display: flex;
+                overflow-x: auto;
+                padding: 10px 0;
+            }
+
+            .nav-item {
+                flex-shrink: 0;
+                padding: 15px 20px;
+                border-left: none;
+                border-bottom: 3px solid transparent;
+            }
+
+            .nav-item.active {
+                border-left: none;
+                border-bottom-color: #3EBB9E;
+            }
+
+            .ride-form {
+                grid-template-columns: 1fr;
+            }
+
+            .ride-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .ride-actions {
+                justify-content: center;
+            }
+        }
+
+        /* Prevent any stray text from showing */
+        body>script+* {
+            display: none !important;
+        }
+
+        /* Ensure proper content containment */
+        .main-container {
+            overflow: hidden;
+        }
+
+        .content-area {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Profile Settings Specific Fixes */
+        #section-profile {
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow: hidden !important;
+            position: relative !important;
+        }
+
+        /* Hide any overflow content */
+        body {
+            overflow-x: hidden !important;
+        }
+
+        /* Ensure no content leaks outside */
+        * {
+            box-sizing: border-box !important;
+        }
+
+        /* Hide any text that appears outside proper containers */
+        body>*:not(.header):not(.main-container):not(script) {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">
+            <i class="fas fa-car"></i> RideConnect Driver
+        </div>
+        <div class="user-section">
+            <div class="notification-bell" onclick="toggleNotifications()">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatarContainer"
+                    style="width: 35px; height: 35px; border-radius: 50%; margin-right: 8px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.2); color: white; font-weight: bold;">
+                    <img id="userProfileImage"
+                        style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: none;"
+                        onerror="showUserInitial()">
+                    <span id="userInitial">D</span>
+                </div>
+                <span id="userName">Driver</span>
+            </div>
+            <button class="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-tachometer-alt"></i> Driver Dashboard</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a class="nav-item active" onclick="showSection('welcome')" id="nav-welcome">
+                    <i class="fas fa-home"></i>
+                    <span>Welcome</span>
+                </a>
+                <a class="nav-item" onclick="showSection('create-ride')" id="nav-create-ride">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Create Ride</span>
+                </a>
+                <a class="nav-item" onclick="showSection('my-rides')" id="nav-my-rides">
+                    <i class="fas fa-list"></i>
+                    <span>My Rides</span>
+                </a>
+                <a class="nav-item" onclick="showSection('bookings')" id="nav-bookings">
+                    <i class="fas fa-users"></i>
+                    <span>Bookings</span>
+                </a>
+                <a class="nav-item" onclick="showSection('wallet')" id="nav-wallet">
+                    <i class="fas fa-wallet"></i>
+                    <span>My Wallet</span>
+                </a>
+                <a class="nav-item" onclick="showSection('profile')" id="nav-profile">
+                    <i class="fas fa-user-cog"></i>
+                    <span>Profile Settings</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <!-- Welcome Section -->
+            <div id="section-welcome" class="content-section active">
+                <div class="section-header">
+                    <h2><i class="fas fa-home"></i> Welcome Driver!</h2>
+                </div>
+                <div class="welcome-card">
+                    <h1>Ready to Share Your Ride?</h1>
+                    <p>Create rides, manage bookings, and earn money by sharing your journey with fellow travelers.</p>
+
+
+
+                    <div class="driver-stats">
+                        <div class="stat-card">
+                            <i class="fas fa-route"></i>
+                            <h3 id="totalRides">0</h3>
+                            <p>Total Rides Created</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-users"></i>
+                            <h3 id="totalBookings">0</h3>
+                            <p>Total Bookings</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-rupee-sign"></i>
+                            <h3 id="totalEarnings">Rs.0.00</h3>
+                            <p>Total Earnings</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-star"></i>
+                            <h3 id="driverRating">-</h3>
+                            <p>Driver Rating (<span id="driverRatingCount">0</span> reviews)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Ride Section -->
+            <div id="section-create-ride" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-plus-circle"></i> Create New Ride</h2>
+                </div>
+                <div class="create-ride-card">
+                    <h3>Share Your Journey</h3>
+
+                    <div id="createRideAlert" class="status-message" style="display: none;"></div>
+
+                    <form class="ride-form" onsubmit="event.preventDefault(); createRide();">
+                        <div class="form-group">
+                            <label><i class="fas fa-map-marker-alt"></i> From</label>
+                            <input type="text" id="rideSource" placeholder="Enter pickup location" required onchange="calculateFarePreview()" onblur="calculateFarePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-map-marker-alt"></i> To</label>
+                            <input type="text" id="rideDestination" placeholder="Enter destination" required onchange="calculateFarePreview()" onblur="calculateFarePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-calendar"></i> Date</label>
+                            <input type="date" id="rideDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-clock"></i> Time</label>
+                            <div class="time-picker">
+                                <select id="rideHour" required>
+                                    <option value="">Hour</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                    <option value="7">7</option>
+                                    <option value="8">8</option>
+                                    <option value="9">9</option>
+                                    <option value="10">10</option>
+                                    <option value="11">11</option>
+                                    <option value="12">12</option>
+                                </select>
+                                <select id="rideMinute" required>
+                                    <option value="">Min</option>
+                                    <option value="00">00</option>
+                                    <option value="15">15</option>
+                                    <option value="30">30</option>
+                                    <option value="45">45</option>
+                                </select>
+                                <select id="rideAmPm" required>
+                                    <option value="">AM/PM</option>
+                                    <option value="AM">AM</option>
+                                    <option value="PM">PM</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-car-side"></i> Total Seats in Vehicle</label>
+                            <select id="totalSeats" required onchange="updateAvailableSeatsOptions(); calculateFarePreview();">
+                                <option value="">Select total seats</option>
+                                <option value="2">2 Seats</option>
+                                <option value="3">3 Seats</option>
+                                <option value="4">4 Seats</option>
+                                <option value="5">5 Seats</option>
+                                <option value="6">6 Seats</option>
+                                <option value="7">7 Seats</option>
+                                <option value="8">8 Seats</option>
+                            </select>
+                            <small style="color: #666; margin-top: 5px;">Total capacity of your vehicle</small>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-users"></i> Available Seats for Booking</label>
+                            <select id="rideSeats" required>
+                                <option value="">Select available seats</option>
+                                <option value="1">1 Seat</option>
+                                <option value="2">2 Seats</option>
+                                <option value="3">3 Seats</option>
+                                <option value="4">4 Seats</option>
+                                <option value="5">5 Seats</option>
+                                <option value="6">6 Seats</option>
+                            </select>
+                            <small style="color: #666; margin-top: 5px;">How many seats you want to offer for
+                                passengers</small>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-rupee-sign"></i> Price per Kilometer (Rs./km)</label>
+                            <input type="number" id="ridePricePerKm" placeholder="Enter price per km (e.g., 10, 15, 20)" 
+                                min="5" max="100" step="0.5" value="10" required onchange="calculateFarePreview()" oninput="calculateFarePreview()">
+                            <small style="color: #666; margin-top: 5px;">Recommended: ₹10-20 per km</small>
+                        </div>
+                        
+                        <!-- Fare Preview Section -->
+                        <div id="farePreviewSection" style="display: none; background: linear-gradient(135deg, #e3f9f3 0%, #d4f4ea 100%); padding: 15px; border-radius: 10px; margin: 15px 0; border-left: 4px solid #3EBB9E;">
+                            <h4 style="color: #00674F; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-calculator"></i> Fare Calculation Preview
+                            </h4>
+                            <div style="display: grid; gap: 8px;">
+                                <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                                    <span style="color: #666;"><i class="fas fa-route"></i> Distance:</span>
+                                    <span id="previewDistance" style="font-weight: 600; color: #00674F;">Calculating...</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                                    <span style="color: #666;"><i class="fas fa-rupee-sign"></i> Base Fare:</span>
+                                    <span style="font-weight: 600; color: #00674F;">₹50.00</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                                    <span style="color: #666;"><i class="fas fa-road"></i> Distance Fare:</span>
+                                    <span id="previewDistanceFare" style="font-weight: 600; color: #00674F;">₹0.00</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 5px 0; background: #fff3cd; padding: 8px; border-radius: 5px; margin-top: 5px;">
+                                    <span style="color: #856404; font-weight: 600;"><i class="fas fa-car"></i> Total Ride Cost:</span>
+                                    <span id="previewTotalRideCost" style="font-weight: 700; color: #856404; font-size: 16px;">₹0.00</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0;">
+                                    <span style="color: #666; font-size: 13px;"><i class="fas fa-users"></i> Total Seats:</span>
+                                    <span id="previewTotalSeats" style="font-weight: 600; color: #666;">1</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 5px 0; border-top: 2px solid #3EBB9E; margin-top: 5px; padding-top: 10px; background: #d4f4ea; padding: 10px; border-radius: 5px;">
+                                    <span style="color: #00674F; font-weight: 600;"><i class="fas fa-ticket-alt"></i> Price per Seat:</span>
+                                    <span id="previewFarePerSeat" style="font-weight: 700; color: #00674F; font-size: 20px;">₹0.00</span>
+                                </div>
+                                <small style="color: #666; margin-top: 5px; font-style: italic; background: #fff; padding: 8px; border-radius: 5px; border: 1px dashed #3EBB9E;">
+                                    💡 <strong>For Passengers:</strong> Each passenger pays the "Price per Seat" for every seat they book.<br>
+                                    🚗 <strong>For You (Driver):</strong> You earn the "Total Ride Cost" when all seats are filled.
+                                </small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-car"></i> Vehicle Model</label>
+                            <input type="text" id="vehicleModel" placeholder="e.g., Honda City, Maruti Swift" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-id-card"></i> Vehicle Plate Number</label>
+                            <input type="text" id="vehiclePlate" placeholder="e.g., MH 01 AB 1234" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-phone"></i> Contact Number</label>
+                            <input type="tel" id="contactNumber" placeholder="Your contact number" required>
+                        </div>
+                        <div class="form-group full-width">
+                            <label><i class="fas fa-info-circle"></i> Additional Notes (Optional)</label>
+                            <textarea id="rideNotes" placeholder="Any additional information for passengers..."
+                                rows="3"></textarea>
+                        </div>
+                    </form>
+
+                    <button class="create-ride-btn" onclick="createRide()" id="createRideBtn">
+                        <i class="fas fa-plus"></i> Create Ride
+                    </button>
+                </div>
+            </div>
+
+            <!-- My Rides Section -->
+            <div id="section-my-rides" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-list"></i> My Rides</h2>
+                    <button class="create-ride-btn" onclick="loadMyRides()" style="width: auto; margin: 0;">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="rides-card">
+                    <div id="myRidesList">
+                        <div class="empty-state">
+                            <i class="fas fa-route"></i>
+                            <h4>No rides created yet</h4>
+                            <p>Create your first ride to start earning money by sharing your journey!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bookings Section -->
+            <div id="section-bookings" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-users"></i> Passenger Bookings</h2>
+                    <button class="create-ride-btn" onclick="loadDriverBookings()" style="width: auto; margin: 0;">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="rides-card">
+                    <div id="driverBookingsList">
+                        <div class="empty-state">
+                            <i class="fas fa-users"></i>
+                            <h4>No bookings yet</h4>
+                            <p>Passenger bookings for your rides will appear here.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wallet Section -->
+            <div id="section-wallet" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-wallet"></i> My Wallet</h2>
+                    <button class="create-ride-btn" onclick="loadWalletData()" style="width: auto; margin: 0;">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+
+                <!-- Wallet Balance Card -->
+                <div class="wallet-card">
+                    <div class="wallet-header">
+                        <h3><i class="fas fa-rupee-sign"></i> Wallet Balance</h3>
+                        <div class="balance-display">
+                            <div class="current-balance">
+                                <span class="balance-label">Available Balance</span>
+                                <span class="balance-amount" id="walletBalance">₹0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wallet-stats">
+                        <div class="wallet-stat">
+                            <i class="fas fa-chart-line"></i>
+                            <div class="stat-info">
+                                <span class="stat-value" id="totalEarningsWallet">₹0.00</span>
+                                <span class="stat-label">Total Earnings</span>
+                            </div>
+                        </div>
+                        <div class="wallet-stat">
+                            <i class="fas fa-arrow-down"></i>
+                            <div class="stat-info">
+                                <span class="stat-value" id="totalWithdrawn">₹0.00</span>
+                                <span class="stat-label">Total Withdrawn</span>
+                            </div>
+                        </div>
+                        <div class="wallet-stat">
+                            <i class="fas fa-clock"></i>
+                            <div class="stat-info">
+                                <span class="stat-value" id="pendingAmount">₹0.00</span>
+                                <span class="stat-label">Pending Amount</span>
+                            </div>
+                        </div>
+                        <div class="wallet-stat">
+                            <i class="fas fa-exchange-alt"></i>
+                            <div class="stat-info">
+                                <span class="stat-value" id="totalTransactions">0</span>
+                                <span class="stat-label">Total Transactions</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wallet-actions">
+                        <button class="withdraw-btn" onclick="openWithdrawModal()" id="withdrawBtn">
+                            <i class="fas fa-money-bill-wave"></i> Withdraw Money
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Transaction History Card -->
+                <div class="wallet-card">
+                    <div class="wallet-header">
+                        <h3><i class="fas fa-history"></i> Transaction History</h3>
+                        <div class="transaction-filters">
+                            <select id="transactionFilter" onchange="filterTransactions()">
+                                <option value="all">All Transactions</option>
+                                <option value="CREDIT">Earnings Only</option>
+                                <option value="WITHDRAWAL">Withdrawals Only</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="transactionsList">
+                        <div class="empty-state">
+                            <i class="fas fa-receipt"></i>
+                            <h4>No transactions yet</h4>
+                            <p>Your earnings and withdrawal history will appear here.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Settings Section -->
+            <div id="section-profile" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-user-cog"></i> Profile Settings</h2>
+                </div>
+
+                <div class="profile-settings-container">
+                    <div class="profile-grid">
+                        <!-- Personal Information Card -->
+                        <div class="profile-card">
+                            <div class="profile-card-header">
+                                <i class="fas fa-user"></i>
+                                <h3>Personal Information</h3>
+                            </div>
+
+                            <div id="profileAlert" class="status-message" style="display: none;"></div>
+
+                            <div class="profile-form">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label><i class="fas fa-user"></i> Full Name</label>
+                                        <input type="text" id="profileName" placeholder="Enter your full name">
+                                    </div>
+                                    <div class="form-group">
+                                        <label><i class="fas fa-envelope"></i> Email Address</label>
+                                        <input type="email" id="profileEmail" placeholder="Enter your email" readonly>
+                                        <small>Email cannot be changed for security reasons</small>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label><i class="fas fa-phone"></i> Phone Number</label>
+                                        <input type="tel" id="profilePhone" placeholder="Enter your phone number">
+                                    </div>
+                                    <div class="form-group">
+                                        <label><i class="fas fa-user-tag"></i> Account Type</label>
+                                        <select id="profileRole">
+                                            <option value="PASSENGER">Passenger Only</option>
+                                            <option value="DRIVER">Driver Only</option>
+                                            <option value="BOTH">Both Passenger & Driver</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="profile-actions">
+                                    <button class="enhanced-btn" onclick="updateProfile()" id="updateProfileBtn">
+                                        <i class="fas fa-save"></i> Update Profile
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Profile Picture Card -->
+                        <div class="profile-card">
+                            <div class="profile-card-header">
+                                <i class="fas fa-camera"></i>
+                                <h3>Profile Picture</h3>
+                            </div>
+
+                            <div class="profile-picture-section">
+                                <div class="profile-picture-container">
+                                    <div class="profile-picture-avatar"
+                                        onclick="document.getElementById('newProfilePicture').click();">
+                                        <img id="currentProfileImage" style="display: none;">
+                                        <span id="currentProfileInitial">D</span>
+                                        <div class="profile-picture-overlay">
+                                            <i class="fas fa-camera"></i>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="profile-picture-text">Click on your avatar to upload a new picture</p>
+                                <p class="profile-picture-hint">Supported formats: JPG, PNG, GIF (Max 2MB)</p>
+
+                                <input type="file" id="newProfilePicture" accept="image/*" style="display: none;"
+                                    onchange="previewNewProfilePicture(this)">
+
+                                <div id="profileUpdateActions" style="display: none; margin-top: 25px;">
+                                    <button class="enhanced-btn" onclick="updateProfilePicture()"
+                                        id="updateProfilePicBtn" style="margin-right: 15px;">
+                                        <i class="fas fa-save"></i> Save Picture
+                                    </button>
+                                    <button class="enhanced-btn secondary" onclick="cancelProfileUpdate()">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vehicle Information Card (for drivers) -->
+                    <div class="profile-card" id="vehicleInfoCard" style="display: none;">
+                        <div class="profile-card-header">
+                            <i class="fas fa-car"></i>
+                            <h3>Vehicle Information</h3>
+                        </div>
+
+                        <div class="profile-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label><i class="fas fa-car"></i> Vehicle Model</label>
+                                    <input type="text" id="vehicleModel" placeholder="e.g., Honda City, Toyota Innova">
+                                    <small>Enter your vehicle make and model</small>
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fas fa-id-card"></i> Vehicle Plate Number</label>
+                                    <input type="text" id="vehiclePlate" placeholder="e.g., MH01AB1234">
+                                    <small>Enter your vehicle registration number</small>
+                                </div>
+                            </div>
+
+                            <div class="form-row single">
+                                <div class="form-group">
+                                    <label><i class="fas fa-users"></i> Vehicle Capacity</label>
+                                    <select id="vehicleCapacity">
+                                        <option value="">Select total seating capacity</option>
+                                        <option value="2">2 Seats (Compact Car)</option>
+                                        <option value="3">3 Seats (Small Car)</option>
+                                        <option value="4">4 Seats (Sedan/Hatchback)</option>
+                                        <option value="5">5 Seats (SUV/Sedan)</option>
+                                        <option value="6">6 Seats (Large SUV)</option>
+                                        <option value="7">7 Seats (MPV/Large SUV)</option>
+                                        <option value="8">8 Seats (Van/Large MPV)</option>
+                                    </select>
+                                    <small>Total number of seats in your vehicle</small>
+                                </div>
+                            </div>
+
+                            <div class="profile-actions">
+                                <button class="enhanced-btn warning" onclick="updateVehicleInfo()"
+                                    id="updateVehicleBtn">
+                                    <i class="fas fa-car"></i> Update Vehicle Info
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security Settings Card -->
+                    <div class="profile-card">
+                        <div class="profile-card-header">
+                            <i class="fas fa-shield-alt"></i>
+                            <h3>Security Settings</h3>
+                        </div>
+
+                        <div id="passwordAlert" class="status-message" style="display: none;"></div>
+
+                        <div class="profile-form">
+                            <div class="form-row single">
+                                <div class="form-group">
+                                    <label><i class="fas fa-lock"></i> Current Password</label>
+                                    <input type="password" id="currentPassword"
+                                        placeholder="Enter your current password">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label><i class="fas fa-key"></i> New Password</label>
+                                    <input type="password" id="newPassword" placeholder="Enter new password"
+                                        minlength="6">
+                                    <small>Password must be at least 6 characters long</small>
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fas fa-key"></i> Confirm New Password</label>
+                                    <input type="password" id="confirmPassword" placeholder="Confirm new password"
+                                        minlength="6">
+                                    <small>Re-enter your new password</small>
+                                </div>
+                            </div>
+
+                            <div class="profile-actions">
+                                <button class="enhanced-btn danger" onclick="changePassword()" id="changePasswordBtn">
+                                    <i class="fas fa-shield-alt"></i> Change Password
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Dropdown -->
+    <div class="notification-dropdown" id="notificationDropdown">
+        <div class="notification-header">
+            <h3><i class="fas fa-bell"></i> Notifications</h3>
+            <button class="mark-all-read" onclick="markAllNotificationsRead()">Mark all read</button>
+        </div>
+        <div class="notification-list" id="notificationList">
+            <div class="no-notifications">
+                <i class="fas fa-bell-slash"></i>
+                <p>No notifications yet</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Ride Modal -->
+    <div id="editRideModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeEditRideModal()">&times;</button>
+            <h2 class="modal-title">
+                <i class="fas fa-edit"></i> Edit Ride
+            </h2>
+
+            <div id="editRideAlert" class="status-message" style="display: none;"></div>
+
+            <div class="edit-ride-form">
+                <div class="form-group">
+                    <label><i class="fas fa-users"></i> Available Seats</label>
+                    <select id="editAvailableSeats">
+                        <option value="1">1 Seat</option>
+                        <option value="2">2 Seats</option>
+                        <option value="3">3 Seats</option>
+                        <option value="4">4 Seats</option>
+                        <option value="5">5 Seats</option>
+                        <option value="6">6 Seats</option>
+                        <option value="7">7 Seats</option>
+                        <option value="8">8 Seats</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-rupee-sign"></i> Price per Seat (Rs.)</label>
+                    <input type="number" id="editPricePerKm" min="10" max="5000">
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-info-circle"></i> Status</label>
+                    <select id="editRideStatus">
+                        <option value="ACTIVE">Active</option>
+                        <option value="CANCELLED">Cancelled</option>
+                    </select>
+                </div>
+
+                <button class="confirm-withdraw-btn" onclick="saveRideChanges()" id="saveRideBtn">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdraw Modal -->
+    <div id="withdrawModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeWithdrawModal()">&times;</button>
+            <h2 class="modal-title">
+                <i class="fas fa-money-bill-wave"></i> Withdraw Money
+            </h2>
+
+            <div id="withdrawAlert" class="status-message" style="display: none;"></div>
+
+            <div class="withdraw-form">
+                <div class="form-group">
+                    <label><i class="fas fa-rupee-sign"></i> Withdrawal Amount</label>
+                    <input type="number" id="withdrawAmount" placeholder="Enter amount to withdraw" min="100"
+                        max="50000" onchange="updateWithdrawSummary()">
+                    <small style="color: #666; margin-top: 5px;">Minimum withdrawal: ₹100, Maximum: ₹50,000</small>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-comment"></i> Description (Optional)</label>
+                    <textarea id="withdrawDescription" placeholder="Add a note for this withdrawal..."
+                        rows="3"></textarea>
+                </div>
+
+                <div class="withdraw-summary" id="withdrawSummary" style="display: none;">
+                    <h4 style="color: #00674F; margin-bottom: 15px;">Withdrawal Summary</h4>
+                    <div class="summary-row">
+                        <span>Withdrawal Amount:</span>
+                        <span id="summaryAmount">₹0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Processing Fee:</span>
+                        <span id="summaryFee">₹0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Available Balance:</span>
+                        <span id="summaryAvailable">₹0</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>You will receive:</span>
+                        <span id="summaryTotal">₹0</span>
+                    </div>
+                </div>
+
+                <button class="confirm-withdraw-btn" onclick="confirmWithdrawal()" id="confirmWithdrawBtn" disabled>
+                    <i class="fas fa-check"></i> Confirm Withdrawal
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Driver Review Modal -->
+    <div id="driverReviewModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeDriverReviewModal()">&times;</button>
+            <h2 class="modal-title"><i class="fas fa-star"></i> Rate Your Passenger</h2>
+
+            <div id="driverReviewAlert" class="status-message" style="display: none;"></div>
+
+            <!-- Passenger Summary -->
+            <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 20px; border-radius: 10px; margin-bottom: 25px; border: 2px solid #3EBB9E;">
+                <h4 style="color: #00674F; margin-bottom: 15px;"><i class="fas fa-user"></i> Passenger Details</h4>
+                <p style="margin: 5px 0; color: #666;"><strong>Name:</strong> <span id="reviewPassengerName"></span></p>
+                <p style="margin: 5px 0; color: #666;"><strong>Route:</strong> <span id="reviewPassengerRoute"></span></p>
+                <p style="margin: 5px 0; color: #666;"><strong>Date:</strong> <span id="reviewPassengerDate"></span></p>
+            </div>
+
+            <!-- Rating Section -->
+            <div class="form-group" style="margin-bottom: 25px; text-align: center;">
+                <label style="font-weight: 600; color: #00674F; margin-bottom: 15px; display: block; font-size: 16px;">How was your passenger?</label>
+                <div class="star-rating" style="font-size: 48px; cursor: pointer;">
+                    <i class="far fa-star" data-rating="1" onclick="setDriverRating(1)"></i>
+                    <i class="far fa-star" data-rating="2" onclick="setDriverRating(2)"></i>
+                    <i class="far fa-star" data-rating="3" onclick="setDriverRating(3)"></i>
+                    <i class="far fa-star" data-rating="4" onclick="setDriverRating(4)"></i>
+                    <i class="far fa-star" data-rating="5" onclick="setDriverRating(5)"></i>
+                </div>
+                <p id="driverRatingText" style="margin-top: 10px; color: #666; font-weight: 500;">Select a rating</p>
+            </div>
+
+            <!-- Comment Section -->
+            <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-weight: 600; color: #00674F; margin-bottom: 10px; display: block;">Share your experience (optional)</label>
+                <textarea id="driverReviewComment" rows="4" placeholder="Tell us about your passenger experience..."
+                    style="width: 100%; padding: 15px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 16px; resize: vertical; font-family: inherit;"></textarea>
+            </div>
+
+            <button class="confirm-withdraw-btn" onclick="submitDriverReview()" id="submitDriverReviewBtn" disabled style="background: linear-gradient(135deg, #3EBB9E, #73E6CB);">
+                <i class="fas fa-paper-plane"></i> Submit Review
+            </button>
+        </div>
+    </div>
+
+    <script src="/js/websocket-notifications.js"></script>
+    <script>
+        const API_BASE_URL = 'http://localhost:8080/api';
+        let currentUser = null;
+
+        // Note: Authentication is now handled by checkAuth() function in DOMContentLoaded
+
+        // Load user profile picture
+        function loadUserProfilePicture(user) {
+            const profileImage = document.getElementById('userProfileImage');
+            const userInitial = document.getElementById('userInitial');
+
+            if (user.profilePicture) {
+                profileImage.src = user.profilePicture;
+                profileImage.style.display = 'block';
+                userInitial.style.display = 'none';
+            } else {
+                profileImage.style.display = 'none';
+                userInitial.style.display = 'flex';
+                userInitial.textContent = user.username ? user.username.charAt(0).toUpperCase() : 'D';
+            }
+        }
+
+        // Show user initial if image fails to load
+        function showUserInitial() {
+            const profileImage = document.getElementById('userProfileImage');
+            const userInitial = document.getElementById('userInitial');
+
+            profileImage.style.display = 'none';
+            userInitial.style.display = 'flex';
+        }
+
+        // Navigation
+        function showSection(sectionName) {
+            console.log('ðŸ“ Navigating to:', sectionName);
+
+            // Hide all sections
+            const sections = document.querySelectorAll('.content-section');
+            sections.forEach(section => section.classList.remove('active'));
+
+            // Remove active class from all nav items
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => item.classList.remove('active'));
+
+            // Show selected section
+            const targetSection = document.getElementById('section-' + sectionName);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+
+            // Add active class to clicked nav item
+            const targetNav = document.getElementById('nav-' + sectionName);
+            if (targetNav) {
+                targetNav.classList.add('active');
+            }
+
+            // Load data for specific sections
+            if (sectionName === 'profile') {
+                loadProfileData();
+            } else if (sectionName === 'my-rides') {
+                // Load rides when navigating to My Rides section
+                loadMyRides();
+                loadDriverStats();
+            } else if (sectionName === 'bookings') {
+                // Load bookings when navigating to Bookings section
+                loadDriverBookings();
+                loadDriverStats();
+            } else if (sectionName === 'welcome') {
+                // Load stats when navigating to Welcome/Dashboard
+                loadDriverStats();
+            } else if (sectionName === 'create-ride') {
+                // Clear any previous error messages when opening create ride form
+                const alertDiv = document.getElementById('createRideAlert');
+                if (alertDiv) {
+                    alertDiv.style.display = 'none';
+                }
+            }
+        }
+
+        // Calculate and display fare preview for driver
+        let fareCalculationTimeout = null;
+        async function calculateFarePreview() {
+            // Debounce the calculation
+            clearTimeout(fareCalculationTimeout);
+            
+            fareCalculationTimeout = setTimeout(async () => {
+                const source = document.getElementById('rideSource').value.trim();
+                const destination = document.getElementById('rideDestination').value.trim();
+                const pricePerKm = parseFloat(document.getElementById('ridePricePerKm').value) || 10;
+                const totalSeats = parseInt(document.getElementById('totalSeats').value) || 1;
+                
+                // Only calculate if we have source and destination
+                if (!source || !destination) {
+                    document.getElementById('farePreviewSection').style.display = 'none';
+                    return;
+                }
+                
+                // Show the preview section
+                document.getElementById('farePreviewSection').style.display = 'block';
+                document.getElementById('previewDistance').textContent = 'Calculating...';
+                document.getElementById('previewDistanceFare').textContent = '₹0.00';
+                document.getElementById('previewFarePerSeat').textContent = '₹0.00';
+                
+                try {
+                    // Call backend to get distance
+                    const authToken = localStorage.getItem('authToken');
+                    
+                    const response = await fetch(`${API_BASE_URL}/fare/calculate`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify({
+                            source: source,
+                            destination: destination,
+                            passengers: 1,  // Just for calculation
+                            pricePerKm: pricePerKm
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.data) {
+                        const fareData = data.data;
+                        const distance = fareData.distance || 0;
+                        const baseFare = fareData.baseFare || 50;
+                        const distanceFare = fareData.distanceFare || 0;
+                        const totalRideFare = baseFare + distanceFare;
+                        const farePerSeat = totalRideFare / totalSeats;
+                        
+                        // Update UI
+                        document.getElementById('previewDistance').textContent = `${distance.toFixed(2)} km`;
+                        document.getElementById('previewDistanceFare').textContent = `₹${distanceFare.toFixed(2)}`;
+                        document.getElementById('previewTotalRideCost').textContent = `₹${totalRideFare.toFixed(2)}`;
+                        document.getElementById('previewTotalSeats').textContent = `${totalSeats} seats`;
+                        document.getElementById('previewFarePerSeat').textContent = `₹${farePerSeat.toFixed(2)}`;
+                        
+                        console.log('📊 Fare Preview:', {
+                            distance: distance,
+                            baseFare: baseFare,
+                            pricePerKm: pricePerKm,
+                            distanceFare: distanceFare,
+                            totalRideFare: totalRideFare,
+                            totalSeats: totalSeats,
+                            farePerSeat: farePerSeat
+                        });
+                    } else {
+                        throw new Error(data.message || 'Failed to calculate fare');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error calculating fare preview:', error);
+                    document.getElementById('previewDistance').textContent = 'Error calculating';
+                    document.getElementById('previewDistanceFare').textContent = 'N/A';
+                    document.getElementById('previewFarePerSeat').textContent = 'N/A';
+                }
+            }, 500); // Wait 500ms after user stops typing
+        }
+        
+        // Update available seats options based on total seats
+        function updateAvailableSeatsOptions() {
+            const totalSeats = parseInt(document.getElementById('totalSeats').value);
+            const availableSeatsSelect = document.getElementById('rideSeats');
+
+            // Clear existing options
+            availableSeatsSelect.innerHTML = '<option value="">Select available seats</option>';
+
+            if (totalSeats) {
+                // Add options from 1 to total seats
+                for (let i = 1; i <= totalSeats; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = i === 1 ? '1 Seat' : `${i} Seats`;
+                    availableSeatsSelect.appendChild(option);
+                }
+            }
+        }
+
+        // Create ride function
+        async function createRide() {
+            // Clear any previous errors first
+            const alertDiv = document.getElementById('createRideAlert');
+            if (alertDiv) {
+                alertDiv.style.display = 'none';
+            }
+
+            const source = document.getElementById('rideSource').value.trim();
+            const destination = document.getElementById('rideDestination').value.trim();
+            const date = document.getElementById('rideDate').value;
+            const hour = document.getElementById('rideHour').value;
+            const minute = document.getElementById('rideMinute').value;
+            const ampm = document.getElementById('rideAmPm').value;
+            const totalSeats = document.getElementById('totalSeats').value;
+            const seats = document.getElementById('rideSeats').value;
+            const pricePerKm = document.getElementById('ridePricePerKm').value;
+            const vehicleModel = document.getElementById('vehicleModel').value.trim();
+            const vehiclePlate = document.getElementById('vehiclePlate').value.trim();
+            const contactNumber = document.getElementById('contactNumber').value.trim();
+            const notes = document.getElementById('rideNotes').value.trim();
+
+            if (!source || !destination || !date || !hour || !minute || !ampm || !totalSeats || !seats || !pricePerKm || !vehicleModel || !vehiclePlate || !contactNumber) {
+                showCreateRideAlert('Please fill in all required fields', 'error');
+                return;
+            }
+
+            // Convert 12-hour format to 24-hour format for backend
+            let hour24 = parseInt(hour);
+            if (ampm === 'PM' && hour24 !== 12) {
+                hour24 += 12;
+            } else if (ampm === 'AM' && hour24 === 12) {
+                hour24 = 0;
+            }
+            const time = `${hour24.toString().padStart(2, '0')}:${minute}`;
+
+            console.log('Creating ride:', { source, destination, date, time, seats, pricePerKm, vehiclePlate });
+
+            const createBtn = document.getElementById('createRideBtn');
+            const originalText = createBtn.innerHTML;
+            createBtn.innerHTML = '<div class="loading"></div> Creating Ride...';
+            createBtn.disabled = true;
+
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/rides`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        source: source,
+                        destination: destination,
+                        date: date,
+                        time: time,
+                        totalSeats: parseInt(totalSeats),
+                        availableSeats: parseInt(seats),
+                        pricePerKm: parseFloat(pricePerKm),
+                        vehicleModel: vehicleModel,
+                        vehiclePlate: vehiclePlate,
+                        contactNumber: contactNumber,
+                        notes: notes
+                    })
+                });
+
+                const data = await response.json();
+                console.log('Create ride response:', data);
+
+                if (response.ok && data.success) {
+                    showCreateRideAlert('🎉 Ride created successfully!', 'success');
+
+                    // Clear form (but keep contact number auto-filled)
+                    document.getElementById('rideSource').value = '';
+                    document.getElementById('rideDestination').value = '';
+                    document.getElementById('rideDate').value = '';
+                    document.getElementById('rideHour').value = '';
+                    document.getElementById('rideMinute').value = '';
+                    document.getElementById('rideAmPm').value = '';
+                    document.getElementById('totalSeats').value = '';
+                    document.getElementById('rideSeats').value = '';
+                    document.getElementById('ridePricePerKm').value = '10';
+                    document.getElementById('vehicleModel').value = '';
+                    // Hide fare preview after clearing form
+                    document.getElementById('farePreviewSection').style.display = 'none';
+                    document.getElementById('vehiclePlate').value = '';
+                    document.getElementById('rideNotes').value = '';
+
+                    // Reset available seats options
+                    document.getElementById('rideSeats').innerHTML = '<option value="">Select available seats</option>';
+                    // Keep contact number auto-filled
+                    if (currentUser && currentUser.phone) {
+                        document.getElementById('contactNumber').value = currentUser.phone;
+                    }
+
+                    // Refresh rides list and navigate to My Rides
+                    loadMyRides();
+                    loadDriverStats();
+
+                    // Auto-navigate to My Rides section after 2 seconds
+                    setTimeout(() => {
+                        showSection('my-rides');
+                    }, 2000);
+
+                } else {
+                    showCreateRideAlert(data.message || 'Failed to create ride. Please try again.', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error creating ride:', error);
+                showCreateRideAlert('Network error. Please check your connection and try again.', 'error');
+            } finally {
+                createBtn.innerHTML = originalText;
+                createBtn.disabled = false;
+            }
+        }
+
+        // Show create ride alert
+        function showCreateRideAlert(message, type = 'info') {
+            const alertDiv = document.getElementById('createRideAlert');
+            alertDiv.className = `status-message ${type}`;
+            alertDiv.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i> ${message}`;
+            alertDiv.style.display = 'block';
+
+            // Auto hide after 5 seconds
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Load my rides
+        async function loadMyRides() {
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/rides/my-rides`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    displayMyRides(data.data);
+                } else {
+                    console.log('No rides found or error:', data.message);
+                }
+
+            } catch (error) {
+                console.error('Error loading rides:', error);
+            }
+        }
+
+        // Display my rides
+        function displayMyRides(rides) {
+            const ridesListDiv = document.getElementById('myRidesList');
+
+            if (rides.length === 0) {
+                ridesListDiv.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-route"></i>
+                        <h4>No rides created yet</h4>
+                        <p>Create your first ride to start earning money by sharing your journey!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            ridesListDiv.innerHTML = `
+                <div class="rides-list">
+                    ${rides.map(ride => `
+                        <div class="ride-card">
+                            <div class="ride-header">
+                                <div class="ride-info">
+                                    <h4>${ride.source} &rarr; ${ride.destination}</h4>
+                                    <p><i class="fas fa-calendar"></i> ${formatDate(ride.date)} at ${formatTimeToAMPM(ride.time)}</p>
+                                </div>
+                                <div class="ride-status">
+                                    <span class="status-badge ${ride.status.toLowerCase()}">${ride.status}</span>
+                                    <div class="ride-price">₹${ride.pricePerKm}/seat</div>
+                                </div>
+                            </div>
+                            <div class="ride-details">
+                                <div class="detail-item">
+                                    <i class="fas fa-users"></i>
+                                    <span>${ride.availableSeats}/${ride.totalSeats || ride.availableSeats} seats available</span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-car"></i>
+                                    <span>${ride.vehicleModel}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-id-card"></i>
+                                    <span>${ride.vehiclePlate || 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-phone"></i>
+                                    <span>${ride.contactNumber || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div class="ride-actions">
+                                ${ride.status === 'ACTIVE' ? `
+                                    <button class="btn-small btn-edit" onclick="editRide(${ride.id})">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button class="btn-small btn-success" onclick="completeRide(${ride.id})">
+                                        <i class="fas fa-check-circle"></i> Complete
+                                    </button>
+                                    <button class="btn-small btn-cancel" onclick="cancelRide(${ride.id})">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </button>
+                                ` : `
+                                    <span class="status-badge ${ride.status.toLowerCase()}">${ride.status}</span>
+                                `}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // Load driver bookings
+        async function loadDriverBookings() {
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/rides/bookings/driver`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    displayDriverBookings(data.data);
+                } else {
+                    console.log('No bookings found or error:', data.message);
+                }
+
+            } catch (error) {
+                console.error('Error loading driver bookings:', error);
+            }
+        }
+
+        // Display driver bookings
+        function displayDriverBookings(bookings) {
+            console.log('📋 Displaying bookings:', bookings);
+            const bookingsListDiv = document.getElementById('driverBookingsList');
+
+            if (bookings.length === 0) {
+                bookingsListDiv.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-users"></i>
+                        <h4>No bookings yet</h4>
+                        <p>Passenger bookings for your rides will appear here.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Log completed bookings
+            const completedBookings = bookings.filter(b => b.status === 'COMPLETED');
+            console.log('✅ Completed bookings:', completedBookings.length);
+            bookings.forEach(b => {
+                console.log(`Booking ${b.id}: Status = ${b.status}`);
+            });
+
+            bookingsListDiv.innerHTML = `
+                <div class="rides-list">
+                    ${bookings.map(booking => `
+                        <div class="ride-card">
+                            <div class="ride-header">
+                                <div class="ride-info">
+                                    <h4>${booking.ride.source} &rarr; ${booking.ride.destination}</h4>
+                                    <p><i class="fas fa-user"></i> Passenger: ${booking.passenger.username}</p>
+                                </div>
+                                <div class="ride-status">
+                                    <span class="status-badge ${booking.status.toLowerCase()}">${booking.status}</span>
+                                    <div class="ride-price">₹${booking.fare}</div>
+                                </div>
+                            </div>
+                            <div class="ride-details">
+                                <div class="detail-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <span>${formatDate(booking.ride.date)} at ${formatTimeToAMPM(booking.ride.time)}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-users"></i>
+                                    <span>${booking.seatsBooked} seat(s) booked</span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-envelope"></i>
+                                    <span>${booking.passenger.email}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-phone"></i>
+                                    <span>${booking.passenger.phone || 'N/A'}</span>
+                                </div>
+                            </div>
+                            ${booking.status === 'COMPLETED' ? `
+                                <div class="ride-actions" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e9ecef; justify-content: flex-end;">
+                                    <button class="btn-small btn-primary" 
+                                        onclick="console.log('Review button clicked for booking ${booking.id}'); openDriverReviewModalById(${booking.id}, ${booking.passenger.id}, '${booking.passenger.username}', '${booking.ride.source}', '${booking.ride.destination}', '${booking.ride.date}')" 
+                                        style="background: linear-gradient(135deg, #3EBB9E, #73E6CB); cursor: pointer;">
+                                        <i class="fas fa-star"></i> Review Passenger
+                                    </button>
+                                </div>
+                            ` : `
+                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e9ecef; color: #666; font-size: 14px;">
+                                    <i class="fas fa-info-circle"></i> Complete the ride to enable reviews
+                                </div>
+                            `}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // Load driver stats
+        async function loadDriverStats() {
+            try {
+                const authToken = localStorage.getItem('authToken');
+
+                // Load rides
+                const ridesResponse = await fetch(`${API_BASE_URL}/rides/my-rides`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const ridesData = await ridesResponse.json();
+
+                // Load bookings
+                const bookingsResponse = await fetch(`${API_BASE_URL}/rides/bookings/driver`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const bookingsData = await bookingsResponse.json();
+
+                // Update stats
+                const totalRides = ridesData.success ? ridesData.data.length : 0;
+                const totalBookings = bookingsData.success ? bookingsData.data.length : 0;
+                const totalEarnings = bookingsData.success ?
+                    bookingsData.data.reduce((sum, booking) => sum + (booking.fare || 0), 0) : 0;
+
+                document.getElementById('totalRides').textContent = totalRides;
+                document.getElementById('totalBookings').textContent = totalBookings;
+                document.getElementById('totalEarnings').textContent = `₹${totalEarnings}`;
+                
+                // Load rating summary
+                loadUserRatingSummary();
+
+            } catch (error) {
+                console.error('Error loading driver stats:', error);
+            }
+        }
+
+        // Edit ride (placeholder)
+        function editRide(rideId) {
+            alert(`Edit ride functionality will be implemented soon. Ride ID: ${rideId}`);
+        }
+
+        // Cancel ride
+        async function cancelRide(rideId) {
+            if (!confirm('Are you sure you want to cancel this ride?')) {
+                return;
+            }
+
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/rides/${rideId}/cancel`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Ride cancelled successfully!');
+                    loadMyRides();
+                    loadDriverStats();
+                } else {
+                    alert('Error cancelling ride: ' + (data.message || 'Unknown error'));
+                }
+
+            } catch (error) {
+                console.error('Error cancelling ride:', error);
+                alert('Error cancelling ride. Please try again.');
+            }
+        }
+
+        // Logout function
+        function logout() {
+            console.log('ðŸšª Logging out...');
+
+            // Clear all stored data
+            localStorage.clear();
+            sessionStorage.clear();
+
+            // Redirect to login page
+            alert('Logged out successfully!');
+            window.location.href = 'index.html';
+        }
+
+        // Format time to AM/PM
+        function formatTimeToAMPM(time24) {
+            if (!time24) return time24;
+
+            const [hours, minutes] = time24.split(':');
+            const hour12 = hours % 12 || 12;
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            return `${hour12}:${minutes} ${ampm}`;
+        }
+
+        // Format date to readable format
+        function formatDate(dateStr) {
+            if (!dateStr) return dateStr;
+
+            const date = new Date(dateStr);
+            const options = {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                weekday: 'short'
+            };
+            return date.toLocaleDateString('en-US', options);
+        }
+
+        // ==================== PROFILE MANAGEMENT SYSTEM ====================
+        let newProfilePictureData = null;
+
+        // Load profile data when profile section is accessed
+        function loadProfileData() {
+            if (currentUser) {
+                document.getElementById('profileName').value = currentUser.name || currentUser.username || '';
+                document.getElementById('profileEmail').value = currentUser.email || '';
+                document.getElementById('profilePhone').value = currentUser.phone || '';
+                document.getElementById('profileRole').value = currentUser.role || 'PASSENGER';
+
+                // Load vehicle info if user is driver
+                if (currentUser.role === 'DRIVER' || currentUser.role === 'BOTH') {
+                    document.getElementById('vehicleInfoCard').style.display = 'block';
+                    document.getElementById('vehicleModel').value = currentUser.vehicleModel || '';
+                    document.getElementById('vehiclePlate').value = currentUser.vehiclePlate || '';
+                    document.getElementById('vehicleCapacity').value = currentUser.vehicleCapacity || '';
+                } else {
+                    document.getElementById('vehicleInfoCard').style.display = 'none';
+                }
+
+                // Load current profile picture
+                loadCurrentProfilePicture();
+                
+                // Load rating summary
+                loadUserRatingSummary();
+            }
+        }
+
+        // Update profile information
+        async function updateProfile() {
+            const name = document.getElementById('profileName').value.trim();
+            const phone = document.getElementById('profilePhone').value.trim();
+            const role = document.getElementById('profileRole').value;
+            const btn = document.getElementById('updateProfileBtn');
+
+            if (!name || !phone || !role) {
+                showProfileAlert('Please fill in all required fields', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loading"></div> Updating...';
+
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/auth/update-profile`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        phone: phone,
+                        role: role
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update current user data
+                    currentUser.name = name;
+                    currentUser.phone = phone;
+                    currentUser.role = role;
+                    localStorage.setItem('userData', JSON.stringify(currentUser));
+
+                    // Update header display
+                    document.getElementById('userName').textContent = currentUser.username || 'Driver';
+
+                    // Show/hide vehicle info based on role
+                    if (role === 'DRIVER' || role === 'BOTH') {
+                        document.getElementById('vehicleInfoCard').style.display = 'block';
+                    } else {
+                        document.getElementById('vehicleInfoCard').style.display = 'none';
+                    }
+
+                    showProfileAlert('✅ Profile updated successfully!', 'success');
+                } else {
+                    showProfileAlert(data.message || 'Failed to update profile', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                showProfileAlert('Error updating profile. Please try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Update Profile';
+            }
+        }
+
+        // Update vehicle information
+        async function updateVehicleInfo() {
+            const vehicleModel = document.getElementById('vehicleModel').value.trim();
+            const vehiclePlate = document.getElementById('vehiclePlate').value.trim();
+            const vehicleCapacity = document.getElementById('vehicleCapacity').value;
+            const btn = document.getElementById('updateVehicleBtn');
+
+            if (!vehicleModel || !vehiclePlate || !vehicleCapacity) {
+                showProfileAlert('Please fill in all vehicle information fields', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loading"></div> Updating...';
+
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/auth/update-vehicle`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        vehicleModel: vehicleModel,
+                        vehiclePlate: vehiclePlate,
+                        vehicleCapacity: parseInt(vehicleCapacity)
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update current user data
+                    currentUser.vehicleModel = vehicleModel;
+                    currentUser.vehiclePlate = vehiclePlate;
+                    currentUser.vehicleCapacity = parseInt(vehicleCapacity);
+                    localStorage.setItem('userData', JSON.stringify(currentUser));
+
+                    showProfileAlert('✅ Vehicle information updated successfully!', 'success');
+                } else {
+                    showProfileAlert(data.message || 'Failed to update vehicle information', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error updating vehicle info:', error);
+                showProfileAlert('Error updating vehicle information. Please try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Update Vehicle Info';
+            }
+        }
+
+        // Change password
+        async function changePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const btn = document.getElementById('changePasswordBtn');
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showPasswordAlert('Please fill in all password fields', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showPasswordAlert('New password must be at least 6 characters long', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showPasswordAlert('New passwords do not match', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loading"></div> Changing...';
+
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        currentPassword: currentPassword,
+                        newPassword: newPassword
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Clear password fields
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+
+                    showPasswordAlert('✅ Password changed successfully!', 'success');
+                } else {
+                    showPasswordAlert(data.message || 'Failed to change password', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error changing password:', error);
+                showPasswordAlert('Error changing password. Please try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Change Password';
+            }
+        }
+
+        // Preview new profile picture
+        function previewNewProfilePicture(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+
+                // Validate file size (2MB max)
+                if (file.size > 2 * 1024 * 1024) {
+                    showProfileAlert('Profile picture must be less than 2MB', 'error');
+                    input.value = '';
+                    return;
+                }
+
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    showProfileAlert('Please select a valid image file', 'error');
+                    input.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    const currentImage = document.getElementById('currentProfileImage');
+                    const currentInitial = document.getElementById('currentProfileInitial');
+
+                    currentImage.src = e.target.result;
+                    currentImage.style.display = 'block';
+                    currentInitial.style.display = 'none';
+
+                    newProfilePictureData = e.target.result;
+                    document.getElementById('profileUpdateActions').style.display = 'block';
+                };
+
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Update profile picture
+        async function updateProfilePicture() {
+            if (!newProfilePictureData) {
+                showProfileAlert('No new picture selected', 'error');
+                return;
+            }
+
+            const updateBtn = document.getElementById('updateProfilePicBtn');
+            const originalText = updateBtn.innerHTML;
+            updateBtn.innerHTML = '<div class="loading"></div> Updating...';
+            updateBtn.disabled = true;
+
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/auth/update-profile-picture`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        profilePicture: newProfilePictureData
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update current user data
+                    currentUser.profilePicture = newProfilePictureData;
+                    localStorage.setItem('userData', JSON.stringify(currentUser));
+
+                    // Update header profile picture
+                    loadUserProfilePicture(currentUser);
+
+                    showProfileAlert('✅ Profile picture updated successfully!', 'success');
+
+                    setTimeout(() => {
+                        cancelProfileUpdate();
+                    }, 2000);
+                } else {
+                    showProfileAlert(data.message || 'Failed to update profile picture', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error updating profile picture:', error);
+                showProfileAlert('Error updating profile picture. Please try again.', 'error');
+            } finally {
+                updateBtn.innerHTML = originalText;
+                updateBtn.disabled = false;
+            }
+        }
+
+        // Cancel profile update
+        function cancelProfileUpdate() {
+            newProfilePictureData = null;
+            document.getElementById('newProfilePicture').value = '';
+            document.getElementById('profileUpdateActions').style.display = 'none';
+
+            // Restore original profile picture
+            loadCurrentProfilePicture();
+        }
+
+        // Load current profile picture in settings
+        function loadCurrentProfilePicture() {
+            const currentImage = document.getElementById('currentProfileImage');
+            const currentInitial = document.getElementById('currentProfileInitial');
+
+            if (currentUser && currentUser.profilePicture) {
+                currentImage.src = currentUser.profilePicture;
+                currentImage.style.display = 'block';
+                currentInitial.style.display = 'none';
+            } else {
+                currentImage.style.display = 'none';
+                currentInitial.style.display = 'flex';
+                currentInitial.textContent = currentUser ? currentUser.username.charAt(0).toUpperCase() : 'D';
+            }
+        }
+
+        // Show profile alert
+        function showProfileAlert(message, type = 'info') {
+            const alertDiv = document.getElementById('profileAlert');
+            alertDiv.className = `status-message ${type}`;
+            alertDiv.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i> ${message}`;
+            alertDiv.style.display = 'block';
+
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    alertDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Show password alert
+        function showPasswordAlert(message, type = 'info') {
+            const alertDiv = document.getElementById('passwordAlert');
+            alertDiv.className = `status-message ${type}`;
+            alertDiv.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i> ${message}`;
+            alertDiv.style.display = 'block';
+
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    alertDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // ==================== NOTIFICATION SYSTEM ====================
+        let notificationDropdownOpen = false;
+
+        function toggleNotifications() {
+            const dropdown = document.getElementById('notificationDropdown');
+            if (notificationDropdownOpen) {
+                dropdown.classList.remove('show');
+                notificationDropdownOpen = false;
+            } else {
+                dropdown.classList.add('show');
+                notificationDropdownOpen = true;
+                loadNotifications();
+            }
+        }
+
+        // Close notification dropdown when clicking outside
+        document.addEventListener('click', function (event) {
+            const dropdown = document.getElementById('notificationDropdown');
+            const bell = document.querySelector('.notification-bell');
+
+            if (!dropdown.contains(event.target) && !bell.contains(event.target)) {
+                dropdown.classList.remove('show');
+                notificationDropdownOpen = false;
+            }
+        });
+
+        async function loadNotifications() {
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/notifications`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    displayNotifications(data.data);
+                } else {
+                    console.error('Failed to load notifications:', data.message);
+                }
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+            }
+        }
+
+        function displayNotifications(notifications) {
+            const notificationList = document.getElementById('notificationList');
+
+            if (notifications.length === 0) {
+                notificationList.innerHTML = `
+                    <div class="no-notifications">
+                        <i class="fas fa-bell-slash"></i>
+                        <p>No notifications yet</p>
+                    </div>
+                `;
+                return;
+            }
+
+            notificationList.innerHTML = notifications.map(notification => {
+                const timeAgo = getTimeAgo(new Date(notification.createdAt));
+                const unreadClass = !notification.isRead ? 'unread' : '';
+
+                return `<div class="notification-item ${unreadClass}" onclick="markNotificationRead(${notification.id})">
+                    <div class="notification-title">${notification.title}</div>
+                    <div class="notification-message">${notification.message}</div>
+                    <div class="notification-time">${timeAgo}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function loadUnreadNotificationCount() {
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    updateNotificationBadge(data.data);
+                }
+            } catch (error) {
+                console.error('Error loading unread count:', error);
+            }
+        }
+
+        function updateNotificationBadge(count) {
+            const badge = document.getElementById('notificationBadge');
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        async function markNotificationRead(notificationId) {
+            try {
+                const authToken = localStorage.getItem('authToken');
+                await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                // Refresh notifications and badge
+                loadNotifications();
+                loadUnreadNotificationCount();
+            } catch (error) {
+                console.error('Error marking notification as read:', error);
+            }
+        }
+
+        async function markAllNotificationsRead() {
+            try {
+                const authToken = localStorage.getItem('authToken');
+                await fetch(`${API_BASE_URL}/notifications/mark-all-read`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                // Refresh notifications and badge
+                loadNotifications();
+                loadUnreadNotificationCount();
+            } catch (error) {
+                console.error('Error marking all notifications as read:', error);
+            }
+        }
+
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diffInSeconds = Math.floor((now - date) / 1000);
+
+            if (diffInSeconds < 60) return 'Just now';
+            if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+            if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+            if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+
+            return date.toLocaleDateString();
+        }
+
+        function startNotificationPolling() {
+            // Poll for new notifications every 30 seconds
+            setInterval(() => {
+                loadUnreadNotificationCount();
+            }, 30000);
+        }
+
+        // Wallet Functions
+        let walletData = null;
+        let allTransactions = [];
+
+        // Load wallet data
+        async function loadWalletData() {
+            try {
+                console.log('ðŸ’° Loading wallet data...');
+                const authToken = localStorage.getItem('authToken');
+
+                // Load wallet balance and stats
+                const balanceResponse = await fetch(`${API_BASE_URL}/wallet/balance`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const balanceData = await balanceResponse.json();
+
+                if (balanceData.success) {
+                    walletData = balanceData.data;
+                    updateWalletDisplay(walletData);
+                } else {
+                    console.error('Failed to load wallet balance:', balanceData.message);
+                }
+
+                // Load transaction history
+                const transactionsResponse = await fetch(`${API_BASE_URL}/wallet/transactions?limit=50`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const transactionsData = await transactionsResponse.json();
+
+                if (transactionsData.success) {
+                    allTransactions = transactionsData.data;
+                    displayTransactions(allTransactions);
+                } else {
+                    console.error('Failed to load transactions:', transactionsData.message);
+                }
+
+            } catch (error) {
+                console.error('Error loading wallet data:', error);
+            }
+        }
+
+        // Update wallet display
+        function updateWalletDisplay(wallet) {
+            document.getElementById('walletBalance').textContent = `₹${wallet.balance.toFixed(2)}`;
+            document.getElementById('totalEarningsWallet').textContent = `₹${wallet.totalEarnings.toFixed(2)}`;
+            document.getElementById('totalWithdrawn').textContent = `₹${wallet.totalWithdrawn.toFixed(2)}`;
+            document.getElementById('pendingAmount').textContent = `₹${wallet.pendingAmount.toFixed(2)}`;
+
+            // Update total earnings in welcome section too
+            const totalEarningsElement = document.getElementById('totalEarnings');
+            if (totalEarningsElement) {
+                totalEarningsElement.textContent = `₹${wallet.totalEarnings.toFixed(2)}`;
+            }
+
+            // Enable/disable withdraw button based on available balance
+            const withdrawBtn = document.getElementById('withdrawBtn');
+            if (wallet.availableBalance < 100) {
+                withdrawBtn.disabled = true;
+                withdrawBtn.innerHTML = '<i class="fas fa-money-bill-wave"></i> Minimum ₹100 required';
+            } else {
+                withdrawBtn.disabled = false;
+                withdrawBtn.innerHTML = '<i class="fas fa-money-bill-wave"></i> Withdraw Money';
+            }
+        }
+
+        // Display transactions
+        function displayTransactions(transactions) {
+            const transactionsListDiv = document.getElementById('transactionsList');
+
+            if (transactions.length === 0) {
+                transactionsListDiv.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-receipt"></i>
+                        <h4>No transactions yet</h4>
+                        <p>Your earnings and withdrawal history will appear here.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            transactionsListDiv.innerHTML = transactions.map(transaction => `
+                <div class="transaction-item">
+                    <div class="transaction-info">
+                        <div class="transaction-icon ${transaction.type.toLowerCase()}">
+                            <i class="fas fa-${transaction.type === 'CREDIT' ? 'plus' : 'minus'}"></i>
+                        </div>
+                        <div class="transaction-details">
+                            <h4>${transaction.description}</h4>
+                            <p>${formatDateTime(transaction.createdAt)}</p>
+                            ${transaction.referenceId ? `<p><small>Ref: ${transaction.referenceId}</small></p>` : ''}
+                        </div>
+                    </div>
+                    <div class="transaction-amount">
+                        <div class="amount ${transaction.type.toLowerCase()}">
+                            ${transaction.type === 'CREDIT' ? '+' : '-'}₹${transaction.amount.toFixed(2)}
+                        </div>
+                        <div class="transaction-time">
+                            Balance: ₹${transaction.balanceAfter.toFixed(2)}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Filter transactions
+        function filterTransactions() {
+            const filter = document.getElementById('transactionFilter').value;
+
+            if (filter === 'all') {
+                displayTransactions(allTransactions);
+            } else {
+                const filteredTransactions = allTransactions.filter(t => t.type === filter);
+                displayTransactions(filteredTransactions);
+            }
+        }
+
+        // Open withdraw modal
+        function openWithdrawModal() {
+            if (!walletData || walletData.availableBalance < 100) {
+                alert('Minimum withdrawal amount is ₹100. Your available balance is insufficient.');
+                return;
+            }
+
+            document.getElementById('withdrawModal').classList.add('active');
+            document.getElementById('withdrawAmount').value = '';
+            document.getElementById('withdrawDescription').value = '';
+            document.getElementById('withdrawSummary').style.display = 'none';
+            document.getElementById('confirmWithdrawBtn').disabled = true;
+            hideWithdrawAlert();
+        }
+
+        // Close withdraw modal
+        function closeWithdrawModal() {
+            document.getElementById('withdrawModal').classList.remove('active');
+        }
+
+        // Update withdraw summary
+        function updateWithdrawSummary() {
+            const amount = parseFloat(document.getElementById('withdrawAmount').value);
+            const summaryDiv = document.getElementById('withdrawSummary');
+            const confirmBtn = document.getElementById('confirmWithdrawBtn');
+
+            if (!amount || amount < 100 || amount > 50000) {
+                summaryDiv.style.display = 'none';
+                confirmBtn.disabled = true;
+                return;
+            }
+
+            if (!walletData || amount > walletData.availableBalance) {
+                showWithdrawAlert('Insufficient balance. Available: ₹' + (walletData ? walletData.availableBalance.toFixed(2) : '0'), 'error');
+                summaryDiv.style.display = 'none';
+                confirmBtn.disabled = true;
+                return;
+            }
+
+            hideWithdrawAlert();
+
+            // Calculate processing fee (2% or minimum ₹5)
+            const processingFee = Math.max(amount * 0.02, 5);
+            const finalAmount = amount - processingFee;
+
+            document.getElementById('summaryAmount').textContent = `₹${amount.toFixed(2)}`;
+            document.getElementById('summaryFee').textContent = `₹${processingFee.toFixed(2)}`;
+            document.getElementById('summaryAvailable').textContent = `₹${walletData.availableBalance.toFixed(2)}`;
+            document.getElementById('summaryTotal').textContent = `₹${finalAmount.toFixed(2)}`;
+
+            summaryDiv.style.display = 'block';
+            confirmBtn.disabled = false;
+        }
+
+        // Confirm withdrawal
+        async function confirmWithdrawal() {
+            const amount = parseFloat(document.getElementById('withdrawAmount').value);
+            const description = document.getElementById('withdrawDescription').value.trim() || 'Withdrawal request';
+
+            if (!amount || amount < 100 || amount > 50000) {
+                showWithdrawAlert('Please enter a valid amount between ₹100 and ₹50,000', 'error');
+                return;
+            }
+
+            const confirmBtn = document.getElementById('confirmWithdrawBtn');
+            const originalText = confirmBtn.innerHTML;
+            confirmBtn.innerHTML = '<div class="loading"></div> Processing...';
+            confirmBtn.disabled = true;
+
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/wallet/withdraw`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        amount: amount,
+                        description: description
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showWithdrawAlert('✅ Withdrawal request submitted successfully!', 'success');
+
+                    setTimeout(() => {
+                        closeWithdrawModal();
+                        loadWalletData(); // Refresh wallet data
+                    }, 2000);
+                } else {
+                    showWithdrawAlert(data.message || 'Withdrawal failed', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error processing withdrawal:', error);
+                showWithdrawAlert('Error processing withdrawal. Please try again.', 'error');
+            } finally {
+                confirmBtn.innerHTML = originalText;
+                confirmBtn.disabled = false;
+            }
+        }
+
+        // Show withdraw alert
+        function showWithdrawAlert(message, type = 'info') {
+            const alertDiv = document.getElementById('withdrawAlert');
+            alertDiv.className = `status-message ${type}`;
+            alertDiv.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i> ${message}`;
+            alertDiv.style.display = 'block';
+        }
+
+        // Hide withdraw alert
+        function hideWithdrawAlert() {
+            document.getElementById('withdrawAlert').style.display = 'none';
+        }
+
+        // Format date and time
+        function formatDateTime(dateTimeString) {
+            const date = new Date(dateTimeString);
+            return date.toLocaleDateString('en-IN') + ' at ' + date.toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+
+
+        // Load wallet data when wallet section is accessed
+        document.addEventListener('DOMContentLoaded', function () {
+            // Load initial data when page loads
+            console.log('✅ Driver Dashboard initializing...');
+            
+            // Load rides and stats on page load
+            loadMyRides();
+            loadDriverBookings();
+            loadDriverStats();
+
+            // Initialize notifications (WebSocket + unread badge)
+            try { requestNotificationPermission(); } catch (e) {}
+            try { initializeWebSocket(); } catch (e) { console.warn('WS init skipped', e); }
+            loadUnreadNotificationCount();
+            startNotificationPolling();
+            
+            // Set up auto-refresh every 30 seconds
+            setInterval(() => {
+                console.log('🔄 Auto-refreshing driver data...');
+                loadMyRides();
+                loadDriverBookings();
+                loadDriverStats();
+            }, 30000); // 30 seconds
+            
+            // Add event listener for wallet navigation
+            const walletNav = document.getElementById('nav-wallet');
+            if (walletNav) {
+                walletNav.addEventListener('click', function () {
+                    setTimeout(() => {
+                        loadWalletData();
+                    }, 100);
+                });
+            }
+        });
+
+        // Edit ride function
+        let currentEditRideId = null;
+
+        async function editRide(rideId) {
+            try {
+                currentEditRideId = rideId;
+
+                // Get ride details
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/rides/${rideId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    const ride = data.data;
+
+                    // Populate edit form
+                    document.getElementById('editAvailableSeats').value = ride.availableSeats;
+                    document.getElementById('editPricePerKm').value = ride.pricePerKm;
+                    document.getElementById('editRideStatus').value = ride.status;
+
+                    // Show modal
+                    document.getElementById('editRideModal').classList.add('active');
+                } else {
+                    alert('Error loading ride details: ' + (data.message || 'Unknown error'));
+                }
+
+            } catch (error) {
+                console.error('Error loading ride for edit:', error);
+                alert('Error loading ride details. Please try again.');
+            }
+        }
+
+        // Close edit ride modal
+        function closeEditRideModal() {
+            document.getElementById('editRideModal').classList.remove('active');
+            currentEditRideId = null;
+            hideEditRideAlert();
+        }
+
+        // Save ride changes
+        async function saveRideChanges() {
+            if (!currentEditRideId) return;
+
+            const availableSeats = document.getElementById('editAvailableSeats').value;
+            const pricePerKm = document.getElementById('editPricePerKm').value;
+            const status = document.getElementById('editRideStatus').value;
+
+            const saveBtn = document.getElementById('saveRideBtn');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<div class="loading"></div> Saving...';
+            saveBtn.disabled = true;
+
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/rides/${currentEditRideId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        availableSeats: parseInt(availableSeats),
+                        pricePerKm: parseFloat(pricePerKm),
+                        status: status
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showEditRideAlert('✅ Ride updated successfully!', 'success');
+
+                    setTimeout(() => {
+                        closeEditRideModal();
+                        loadMyRides(); // Refresh rides list
+                    }, 1500);
+                } else {
+                    showEditRideAlert(data.message || 'Failed to update ride', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error updating ride:', error);
+                showEditRideAlert('Error updating ride. Please try again.', 'error');
+            } finally {
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+            }
+        }
+
+        // Show edit ride alert
+        function showEditRideAlert(message, type = 'info') {
+            const alertDiv = document.getElementById('editRideAlert');
+            alertDiv.className = `status-message ${type}`;
+            alertDiv.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i> ${message}`;
+            alertDiv.style.display = 'block';
+        }
+
+        // Hide edit ride alert
+        function hideEditRideAlert() {
+            document.getElementById('editRideAlert').style.display = 'none';
+        }
+
+        // Complete ride function
+        async function completeRide(rideId) {
+            if (!confirm('Mark this ride as completed? This will allow passengers to leave reviews.')) {
+                return;
+            }
+
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/rides/${rideId}/complete`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Ride marked as completed! Passengers can now leave reviews.');
+                    loadMyRides();
+                    loadDriverStats();
+                } else {
+                    alert('Error completing ride: ' + (data.message || 'Unknown error'));
+                }
+
+            } catch (error) {
+                console.error('Error completing ride:', error);
+                alert('Error completing ride. Please try again.');
+            }
+        }
+
+        // Cancel ride function
+        async function cancelRide(rideId) {
+            if (!confirm('Are you sure you want to cancel this ride?')) {
+                return;
+            }
+
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/rides/${rideId}/cancel`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Ride cancelled successfully!');
+                    loadMyRides();
+                    loadDriverStats();
+                } else {
+                    alert('Error cancelling ride: ' + (data.message || 'Unknown error'));
+                }
+
+            } catch (error) {
+                console.error('Error cancelling ride:', error);
+                alert('Error cancelling ride. Please try again.');
+            }
+        }
+
+        // ==================== DRIVER REVIEW FUNCTIONALITY ====================
+        
+        let selectedDriverBookingId = null;
+        let selectedPassengerId = null;
+        let selectedDriverRating = 0;
+
+        // Open driver review modal by ID (simplified version)
+        function openDriverReviewModalById(bookingId, passengerId, passengerName, source, destination, rideDate) {
+            console.log('⭐ Opening driver review modal for booking:', bookingId);
+            
+            selectedDriverBookingId = bookingId;
+            selectedPassengerId = passengerId;
+            selectedDriverRating = 0;
+            
+            // Populate passenger details
+            const route = `${source} → ${destination}`;
+            const date = formatDate(rideDate);
+            
+            document.getElementById('reviewPassengerName').textContent = passengerName;
+            document.getElementById('reviewPassengerRoute').textContent = route;
+            document.getElementById('reviewPassengerDate').textContent = date;
+            
+            // Reset modal inputs
+            document.getElementById('driverReviewComment').value = '';
+            document.querySelectorAll('#driverReviewModal .star-rating i').forEach(star => {
+                star.classList.remove('fas');
+                star.classList.add('far');
+            });
+            document.getElementById('driverRatingText').textContent = 'Select a rating';
+            document.getElementById('submitDriverReviewBtn').disabled = true;
+            hideDriverReviewAlert();
+            
+            // Show modal
+            document.getElementById('driverReviewModal').classList.add('active');
+        }
+        
+        // Open driver review modal (legacy - keeping for compatibility)
+        function openDriverReviewModal(booking) {
+            openDriverReviewModalById(
+                booking.id, 
+                booking.passenger.id, 
+                booking.passenger.username,
+                booking.ride.source,
+                booking.ride.destination,
+                booking.ride.date
+            );
+        }
+
+        // Close driver review modal
+        function closeDriverReviewModal() {
+            document.getElementById('driverReviewModal').classList.remove('active');
+            selectedDriverBookingId = null;
+            selectedPassengerId = null;
+            selectedDriverRating = 0;
+        }
+
+        // Set driver rating
+        function setDriverRating(rating) {
+            console.log('⭐ Setting driver rating:', rating);
+            selectedDriverRating = rating;
+            
+            // Update stars
+            const stars = document.querySelectorAll('#driverReviewModal .star-rating i');
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.remove('far');
+                    star.classList.add('fas');
+                } else {
+                    star.classList.remove('fas');
+                    star.classList.add('far');
+                }
+            });
+            
+            // Update text
+            const ratingTexts = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+            document.getElementById('driverRatingText').textContent = ratingTexts[rating];
+            
+            // Enable submit button
+            document.getElementById('submitDriverReviewBtn').disabled = false;
+        }
+
+        // Submit driver review
+        async function submitDriverReview() {
+            console.log('📝 Submitting driver review...');
+            
+            if (!selectedDriverBookingId || !selectedPassengerId || selectedDriverRating === 0) {
+                showDriverReviewAlert('Please select a rating before submitting.', 'error');
+                return;
+            }
+            
+            const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
+                showDriverReviewAlert('You must be logged in to submit a review.', 'error');
+                return;
+            }
+            
+            const comment = document.getElementById('driverReviewComment').value;
+            const submitBtn = document.getElementById('submitDriverReviewBtn');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.innerHTML = '<div class="loading"></div> Submitting...';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/reviews`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        bookingId: selectedDriverBookingId,
+                        passengerId: selectedPassengerId,
+                        rating: selectedDriverRating,
+                        comment: comment,
+                        reviewType: 'DRIVER_TO_PASSENGER'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showDriverReviewAlert('Thank you for your review!', 'success');
+                    setTimeout(() => {
+                        closeDriverReviewModal();
+                        loadDriverBookings(); // Refresh bookings
+                    }, 1500);
+                } else {
+                    throw new Error(data.message || 'Failed to submit review');
+                }
+                
+            } catch (error) {
+                console.error('Error submitting driver review:', error);
+                showDriverReviewAlert(error.message || 'Failed to submit review. Please try again.', 'error');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+
+        // Show driver review alert
+        function showDriverReviewAlert(message, type = 'info') {
+            const alertDiv = document.getElementById('driverReviewAlert');
+            alertDiv.className = `status-message ${type}`;
+            alertDiv.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i> ${message}`;
+            alertDiv.style.display = 'block';
+        }
+
+        // Hide driver review alert
+        function hideDriverReviewAlert() {
+            const alertDiv = document.getElementById('driverReviewAlert');
+            if (alertDiv) {
+                alertDiv.style.display = 'none';
+            }
+        }
+
+        // ==================== RATING SUMMARY FUNCTIONALITY ====================
+        
+        // Load user rating summary
+        async function loadUserRatingSummary() {
+            try {
+                const authToken = localStorage.getItem('authToken');
+                if (!authToken) {
+                    console.log('⚠️ No auth token found');
+                    return;
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/reviews/my-summary`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const avgRating = data.data.averageRating || 0;
+                    const totalReviews = data.data.totalReviews || 0;
+                    
+                    // Update driver rating display in dashboard
+                    const driverRatingElement = document.getElementById('driverRating');
+                    if (driverRatingElement) {
+                        driverRatingElement.textContent = avgRating > 0 ? avgRating.toFixed(1) : '-';
+                    }
+                    
+                    const driverRatingCountElement = document.getElementById('driverRatingCount');
+                    if (driverRatingCountElement) {
+                        driverRatingCountElement.textContent = totalReviews;
+                    }
+                    
+                    console.log('⭐ Rating summary loaded:', avgRating, 'stars from', totalReviews, 'reviews');
+                } else {
+                    console.log('⚠️ Failed to load rating summary:', data.message);
+                }
+            } catch (error) {
+                console.error('Error loading rating summary:', error);
+            }
+        }
+
+        console.log('🎉 RideConnect Driver Dashboard loaded successfully!');
+    </script>
+</body>
+
+</html>

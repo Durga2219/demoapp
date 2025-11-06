@@ -52,4 +52,32 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
     // ---------------- ACTIVE RIDES ----------------
     @Query("SELECT r FROM Ride r WHERE r.status = 'ACTIVE' ORDER BY r.date, r.time")
     List<Ride> findAllActiveRides();
+
+    // ---------------- ROUTE MATCHING ----------------
+    @Query("SELECT r FROM Ride r WHERE r.date = :date AND r.availableSeats >= :seats AND r.status = 'ACTIVE' ORDER BY r.date, r.time")
+    List<Ride> findByDateAndAvailableSeatsGreaterThanEqual(@Param("date") LocalDate date, @Param("seats") Integer seats);
+
+    // ---------------- STATUS MANAGEMENT ----------------
+    List<Ride> findByStatus(String status);
+    
+    long countByStatus(String status);
+
+    @Query("SELECT r FROM Ride r WHERE r.status = 'ACTIVE' AND (r.date < :currentDate OR (r.date = :currentDate AND r.time < :currentTime))")
+    List<Ride> findPastActiveRides(@Param("currentDate") LocalDate currentDate, @Param("currentTime") java.time.LocalTime currentTime);
+
+    // ---------------- DASHBOARD QUERIES ----------------
+    @Query("SELECT r FROM Ride r WHERE r.status = 'ACTIVE' AND r.availableSeats > 0 AND r.date >= :currentDate ORDER BY r.date ASC, r.time ASC")
+    List<Ride> findAllAvailableRides(@Param("currentDate") LocalDate currentDate);
+
+    @Query("SELECT r FROM Ride r WHERE r.date BETWEEN :startDate AND :endDate ORDER BY r.date ASC, r.time ASC")
+    List<Ride> findRidesByDateRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    // ---------------- ADMIN QUERIES ----------------
+    
+    long countByDate(LocalDate date);
+    
+    long countByDateBetween(LocalDate startDate, LocalDate endDate);
+    
+    @Query("SELECT r FROM Ride r ORDER BY r.createdAt DESC")
+    List<Ride> findTop5ByOrderByCreatedAtDesc();
 }

@@ -16,10 +16,13 @@ public class RegisterRequest {
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
 
-    private String phoneNumber;
+    private String phone;
 
     @NotBlank(message = "Role is required")
     private String role;  // Should be DRIVER, PASSENGER, or BOTH
+
+    // Profile picture for security verification
+    private String profilePicture;
 
     // Optional vehicle details
     private String vehicleModel;
@@ -40,8 +43,8 @@ public class RegisterRequest {
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
 
-    public String getPhoneNumber() { return phoneNumber; }
-    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
@@ -54,4 +57,7 @@ public class RegisterRequest {
 
     public Integer getVehicleCapacity() { return vehicleCapacity; }
     public void setVehicleCapacity(Integer vehicleCapacity) { this.vehicleCapacity = vehicleCapacity; }
+
+    public String getProfilePicture() { return profilePicture; }
+    public void setProfilePicture(String profilePicture) { this.profilePicture = profilePicture; }
 }

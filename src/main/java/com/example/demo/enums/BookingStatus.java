@@ -1,6 +1,7 @@
 package com.example.demo.enums;
 
 public enum BookingStatus {
+    PENDING("Pending Payment"),
     CONFIRMED("Confirmed"),
     CANCELLED("Cancelled"),
     COMPLETED("Completed"),

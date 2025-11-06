@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RideConnect - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            padding: 0 2rem;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .logo i {
+            font-size: 24px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .admin-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: white;
+        }
+
+        .admin-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .refresh-btn, .logout-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .refresh-btn:hover, .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Layout */
+        .container {
+            display: flex;
+            min-height: calc(100vh - 70px);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            padding: 2rem 0;
+        }
+
+        .nav-section {
+            margin-bottom: 2rem;
+        }
+
+        .nav-title {
+            padding: 0 1.5rem;
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 1.5rem;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: #1e40af;
+        }
+
+        .nav-item.active {
+            background: #eff6ff;
+            color: #1e40af;
+            border-left-color: #1e40af;
+            font-weight: 600;
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .nav-badge {
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: auto;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            color: #64748b;
+            font-size: 16px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .stat-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .stat-icon.users { background: #dbeafe; color: #1e40af; }
+        .stat-icon.rides { background: #dcfce7; color: #16a34a; }
+        .stat-icon.revenue { background: #fef3c7; color: #d97706; }
+        .stat-icon.bookings { background: #f3e8ff; color: #9333ea; }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-change.positive { color: #16a34a; }
+        .stat-change.negative { color: #dc2626; }
+
+        /* Data Tables */
+        .data-section {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: between;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: #1e40af;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .btn-success {
+            background: #16a34a;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #15803d;
+        }
+
+        .section-content {
+            padding: 1.5rem;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        /* Data Cards */
+        .data-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .data-card {
+            padding: 1.5rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .data-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .card-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-active { background: #dcfce7; color: #16a34a; }
+        .badge-inactive { background: #fee2e2; color: #dc2626; }
+        .badge-pending { background: #fef3c7; color: #d97706; }
+        .badge-completed { background: #dbeafe; color: #1e40af; }
+
+        .card-content {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .card-actions {
+            margin-top: 1rem;
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Loading States */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+
+        .loading i {
+            margin-right: 8px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Alerts */
+        .alert {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            padding: 16px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            min-width: 300px;
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .alert.show {
+            transform: translateX(0);
+        }
+
+        .alert-success { background: #16a34a; }
+        .alert-error { background: #dc2626; }
+        .alert-info { background: #1e40af; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: fixed;
+                top: 70px;
+                left: -100%;
+                height: calc(100vh - 70px);
+                z-index: 50;
+                transition: left 0.3s;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Auto-refresh indicator */
+        .refresh-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1e40af;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .refresh-indicator.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <i class="fas fa-shield-alt"></i>
+            <span>RideConnect Admin</span>
+        </div>
+        <div class="header-actions">
+            <button class="refresh-btn" onclick="refreshAllData()">
+                <i class="fas fa-sync-alt"></i>
+                <span>Refresh</span>
+            </button>
+            <div class="admin-info">
+                <div class="admin-avatar" id="adminAvatar">A</div>
+                <div>
+                    <div style="font-weight: 600;" id="adminName">Administrator</div>
+                    <div style="font-size: 12px; opacity: 0.8;">System Admin</div>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="nav-section">
+                <div class="nav-title">Overview</div>
+                <div class="nav-item active" id="nav-dashboard">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">Management</div>
+                <div class="nav-item" id="nav-users">
+                    <i class="fas fa-users"></i>
+                    <span>Users</span>
+                    <span class="nav-badge" id="usersBadge">0</span>
+                </div>
+                <div class="nav-item" id="nav-rides">
+                    <i class="fas fa-car"></i>
+                    <span>Rides</span>
+                    <span class="nav-badge" id="ridesBadge">0</span>
+                </div>
+                <div class="nav-item" id="nav-payments">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Payments</span>
+                </div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">Analytics</div>
+                <div class="nav-item" id="nav-reports">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Reports</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Dashboard Section -->
+            <div id="section-dashboard" class="content-section active">
+                <div class="page-header">
+                    <h1 class="page-title">Dashboard Overview</h1>
+                    <p class="page-subtitle">Real-time insights and system metrics</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Total Users</div>
+                            <div class="stat-icon users">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="totalUsers">0</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            <span id="usersChange">+0%</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Active Rides</div>
+                            <div class="stat-icon rides">
+                                <i class="fas fa-car"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="activeRides">0</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            <span id="ridesChange">+0%</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Total Revenue</div>
+                            <div class="stat-icon revenue">
+                                <i class="fas fa-rupee-sign"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="totalRevenue">₹0</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            <span id="revenueChange">+0%</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Today's Bookings</div>
+                            <div class="stat-icon bookings">
+                                <i class="fas fa-ticket-alt"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="todayBookings">0</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            <span id="bookingsChange">+0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Total Drivers</div>
+                            <div class="stat-icon users">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="totalDrivers">0</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Total Passengers</div>
+                            <div class="stat-icon users">
+                                <i class="fas fa-user-friends"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="totalPassengers">0</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Completed Rides</div>
+                            <div class="stat-icon rides">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="completedRides">0</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Today's Revenue</div>
+                            <div class="stat-icon revenue">
+                                <i class="fas fa-calendar-day"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="todayRevenue">₹0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="section-users" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">User Management</h1>
+                    <p class="page-subtitle">Manage users, verify drivers, and handle account issues</p>
+                </div>
+
+                <div class="data-section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="fas fa-users"></i>
+                            All Users
+                        </div>
+                        <div class="section-actions">
+                            <button class="btn btn-secondary" onclick="loadUsers()">
+                                <i class="fas fa-sync-alt"></i>
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="section-content">
+                        <div id="usersList">
+                            <div class="loading">
+                                <i class="fas fa-spinner"></i>
+                                Loading users...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rides Section -->
+            <div id="section-rides" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">Ride Management</h1>
+                    <p class="page-subtitle">Monitor rides, track status, and manage cancellations</p>
+                </div>
+
+                <div class="data-section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="fas fa-car"></i>
+                            All Rides
+                        </div>
+                        <div class="section-actions">
+                            <button class="btn btn-secondary" onclick="loadRides()">
+                                <i class="fas fa-sync-alt"></i>
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="section-content">
+                        <div id="ridesList">
+                            <div class="loading">
+                                <i class="fas fa-spinner"></i>
+                                Loading rides...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payments Section -->
+            <div id="section-payments" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">Payment Management</h1>
+                    <p class="page-subtitle">Monitor transactions and financial data</p>
+                </div>
+
+                <div class="data-section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="fas fa-credit-card"></i>
+                            All Payments
+                        </div>
+                        <div class="section-actions">
+                            <button class="btn btn-secondary" onclick="loadPayments()">
+                                <i class="fas fa-sync-alt"></i>
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="section-content">
+                        <div id="paymentsList">
+                            <div class="loading">
+                                <i class="fas fa-spinner"></i>
+                                Loading payments...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Section -->
+            <div id="section-reports" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">Reports & Analytics</h1>
+                    <p class="page-subtitle">Business insights and performance metrics</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Cancelled Rides</div>
+                            <div class="stat-icon rides">
+                                <i class="fas fa-times-circle"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="cancelledRides">0</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Weekly Revenue</div>
+                            <div class="stat-icon revenue">
+                                <i class="fas fa-calendar-week"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="weeklyRevenue">₹0</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Monthly Revenue</div>
+                            <div class="stat-icon revenue">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="monthlyRevenue">₹0</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Cancellation Rate</div>
+                            <div class="stat-icon rides">
+                                <i class="fas fa-percentage"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="cancellationRate">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-refresh indicator -->
+    <div class="refresh-indicator" id="refreshIndicator">
+        <i class="fas fa-sync-alt"></i>
+        <span>Auto-refreshing data...</span>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8080/api';
+        let currentUser = null;
+        let refreshInterval = null;
+        
+        // ==================== AUTHENTICATION ====================
+        async function checkAuth() {
+            const token = localStorage.getItem('authToken');
+            const userRole = localStorage.getItem('userRole');
+            
+            console.log('Checking auth - Token:', token ? 'Present' : 'Missing', 'Role:', userRole);
+            
+            if (!token || userRole !== 'ADMIN') {
+                console.log('Auth failed, redirecting to admin access page');
+                // Add a small delay to prevent redirect loops
+                setTimeout(() => {
+                    window.location.href = '/admin-access.html';
+                }, 100);
+                return false;
+            }
+            
+            try {
+                // Set admin info from localStorage
+                const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+                document.getElementById('adminName').textContent = adminUser.username || 'Administrator';
+                document.getElementById('adminAvatar').textContent = (adminUser.username || 'A').charAt(0).toUpperCase();
+                return true;
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userRole');
+                window.location.href = '/admin-access.html';
+                return false;
+            }
+        }
+        
+        // ==================== DATA LOADING ====================
+        async function loadDashboardStats() {
+            try {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    updateDashboardStats(data.data);
+                    updateNavigationBadges(data.data);
+                }
+            } catch (error) {
+                console.error('Error loading dashboard stats:', error);
+            }
+        }
+        
+        function updateDashboardStats(stats) {
+            // Update main stats
+            document.getElementById('totalUsers').textContent = stats.totalUsers || 0;
+            document.getElementById('totalDrivers').textContent = stats.totalDrivers || 0;
+            document.getElementById('totalPassengers').textContent = stats.totalPassengers || 0;
+            document.getElementById('activeRides').textContent = stats.activeRides || 0;
+            document.getElementById('completedRides').textContent = stats.completedRides || 0;
+            document.getElementById('cancelledRides').textContent = stats.cancelledRides || 0;
+            document.getElementById('totalRevenue').textContent = '₹' + (stats.totalRevenue || 0);
+            document.getElementById('todayRevenue').textContent = '₹' + (stats.todayRevenue || 0);
+            document.getElementById('todayBookings').textContent = stats.todayRides || 0;
+        }
+        
+        function updateNavigationBadges(stats) {
+            document.getElementById('usersBadge').textContent = stats.totalUsers || 0;
+            document.getElementById('ridesBadge').textContent = stats.activeRides || 0;
+        }
+        
+        async function loadUsers() {
+            try {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/admin/users`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    displayUsers(data.data);
+                } else {
+                    document.getElementById('usersList').innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>No users found</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading users</p></div>';
+            }
+        }
+        
+        function displayUsers(users) {
+            const usersList = document.getElementById('usersList');
+            if (!users || users.length === 0) {
+                usersList.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>No users found</p></div>';
+                return;
+            }
+            
+            usersList.innerHTML = `
+                <div class="data-grid">
+                    ${users.map(user => `
+                        <div class="data-card">
+                            <div class="card-header">
+                                <div class="card-title">${user.name || user.username || 'Unknown User'}</div>
+                                <div class="card-badge ${user.isActive !== false ? 'badge-active' : 'badge-inactive'}">
+                                    ${user.isActive !== false ? 'Active' : 'Inactive'}
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <p><strong>Email:</strong> ${user.email}</p>
+                                <p><strong>Role:</strong> ${user.role}</p>
+                                <p><strong>Phone:</strong> ${user.phone || 'N/A'}</p>
+                                <p><strong>Joined:</strong> ${new Date(user.createdAt).toLocaleDateString()}</p>
+                                ${user.role === 'DRIVER' ? `
+                                    <p><strong>Vehicle:</strong> ${user.vehicleModel || 'N/A'}</p>
+                                    <p><strong>License:</strong> ${user.vehiclePlate || 'N/A'}</p>
+                                ` : ''}
+                            </div>
+                            <div class="card-actions">
+                                <button onclick="blockUser(${user.id})" class="btn btn-danger">
+                                    <i class="fas fa-ban"></i> Block User
+                                </button>
+                                ${user.role === 'DRIVER' ? `
+                                    <button onclick="verifyDriver(${user.id})" class="btn btn-success">
+                                        <i class="fas fa-check"></i> Verify Driver
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        async function loadRides() {
+            try {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/admin/rides`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    displayRides(data.data);
+                } else {
+                    document.getElementById('ridesList').innerHTML = '<div class="empty-state"><i class="fas fa-car"></i><p>No rides found</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading rides:', error);
+                document.getElementById('ridesList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading rides</p></div>';
+            }
+        }
+        
+        function displayRides(rides) {
+            const ridesList = document.getElementById('ridesList');
+            if (!rides || rides.length === 0) {
+                ridesList.innerHTML = '<div class="empty-state"><i class="fas fa-car"></i><p>No rides found</p></div>';
+                return;
+            }
+            
+            ridesList.innerHTML = `
+                <div class="data-grid">
+                    ${rides.map(ride => `
+                        <div class="data-card">
+                            <div class="card-header">
+                                <div class="card-title">${ride.source} → ${ride.destination}</div>
+                                <div class="card-badge ${getBadgeClass(ride.status)}">
+                                    ${ride.status}
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <p><strong>Driver:</strong> ${ride.driver ? ride.driver.name : 'N/A'}</p>
+                                <p><strong>Date:</strong> ${new Date(ride.date).toLocaleDateString()}</p>
+                                <p><strong>Time:</strong> ${ride.time}</p>
+                                <p><strong>Fare:</strong> ₹${ride.fare}</p>
+                                <p><strong>Seats:</strong> ${ride.availableSeats}/${ride.totalSeats}</p>
+                                <p><strong>Created:</strong> ${new Date(ride.createdAt).toLocaleString()}</p>
+                            </div>
+                            ${ride.status !== 'CANCELLED' ? `
+                                <div class="card-actions">
+                                    <button onclick="cancelRide(${ride.id})" class="btn btn-danger">
+                                        <i class="fas fa-times"></i> Cancel Ride
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        async function loadPayments() {
+            try {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/admin/payments`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    displayPayments(data.data);
+                } else {
+                    document.getElementById('paymentsList').innerHTML = '<div class="empty-state"><i class="fas fa-credit-card"></i><p>No payments found</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading payments:', error);
+                document.getElementById('paymentsList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading payments</p></div>';
+            }
+        }
+        
+        function displayPayments(payments) {
+            const paymentsList = document.getElementById('paymentsList');
+            if (!payments || payments.length === 0) {
+                paymentsList.innerHTML = '<div class="empty-state"><i class="fas fa-credit-card"></i><p>No payments found</p></div>';
+                return;
+            }
+            
+            paymentsList.innerHTML = `
+                <div class="data-grid">
+                    ${payments.map(payment => `
+                        <div class="data-card">
+                            <div class="card-header">
+                                <div class="card-title">Payment #${payment.id}</div>
+                                <div class="card-badge ${getBadgeClass(payment.status)}">
+                                    ${payment.status}
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <p><strong>User:</strong> ${payment.user ? payment.user.name : 'N/A'}</p>
+                                <p><strong>Amount:</strong> ₹${payment.amount}</p>
+                                <p><strong>Method:</strong> ${payment.type || 'Online'}</p>
+                                <p><strong>Razorpay ID:</strong> ${payment.razorpayPaymentId || 'N/A'}</p>
+                                <p><strong>Date:</strong> ${new Date(payment.createdAt).toLocaleString()}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        async function loadReports() {
+            try {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/admin/reports/summary`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    updateReportsStats(data.data);
+                }
+            } catch (error) {
+                console.error('Error loading reports:', error);
+            }
+        }
+        
+        function updateReportsStats(reports) {
+            document.getElementById('weeklyRevenue').textContent = '₹' + (reports.weeklyRevenue || 0);
+            document.getElementById('monthlyRevenue').textContent = '₹' + (reports.monthlyRevenue || 0);
+            document.getElementById('cancellationRate').textContent = (reports.cancellationRate || 0).toFixed(1) + '%';
+        }
+        
+        // ==================== ACTIONS ====================
+        async function blockUser(userId) {
+            if (!confirm('Are you sure you want to block this user?')) return;
+            
+            try {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/block`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showAlert('User blocked successfully', 'success');
+                    loadUsers();
+                } else {
+                    showAlert('Failed to block user: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error blocking user', 'error');
+            }
+        }
+        
+        async function cancelRide(rideId) {
+            if (!confirm('Are you sure you want to cancel this ride?')) return;
+            
+            try {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/admin/rides/${rideId}/cancel`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showAlert('Ride cancelled successfully', 'success');
+                    loadRides();
+                    loadDashboardStats(); // Refresh stats
+                } else {
+                    showAlert('Failed to cancel ride: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error cancelling ride', 'error');
+            }
+        }
+        
+        // ==================== NAVIGATION ====================
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Show selected section
+            const targetSection = document.getElementById('section-' + sectionName);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+            
+            // Add active class to clicked nav item
+            const targetNav = document.getElementById('nav-' + sectionName);
+            if (targetNav) {
+                targetNav.classList.add('active');
+            }
+            
+            // Load data for specific sections
+            switch(sectionName) {
+                case 'dashboard':
+                    loadDashboardStats();
+                    break;
+                case 'users':
+                    loadUsers();
+                    break;
+                case 'rides':
+                    loadRides();
+                    break;
+                case 'payments':
+                    loadPayments();
+                    break;
+                case 'reports':
+                    loadReports();
+                    break;
+            }
+        }
+        
+        // ==================== UTILITY FUNCTIONS ====================
+        function getBadgeClass(status) {
+            switch(status?.toUpperCase()) {
+                case 'ACTIVE': return 'badge-active';
+                case 'COMPLETED': case 'SUCCESS': return 'badge-completed';
+                case 'CANCELLED': case 'FAILED': return 'badge-inactive';
+                case 'PENDING': case 'CREATED': return 'badge-pending';
+                default: return 'badge-pending';
+            }
+        }
+        
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => alertDiv.classList.add('show'), 100);
+            
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+                setTimeout(() => {
+                    if (document.body.contains(alertDiv)) {
+                        document.body.removeChild(alertDiv);
+                    }
+                }, 300);
+            }, 4000);
+        }
+        
+        function refreshAllData() {
+            const indicator = document.getElementById('refreshIndicator');
+            indicator.classList.add('show');
+            
+            // Get current active section
+            const activeSection = document.querySelector('.content-section.active');
+            const sectionName = activeSection.id.replace('section-', '');
+            
+            // Refresh current section data
+            showSection(sectionName);
+            
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 2000);
+        }
+        
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('adminUser');
+            window.location.href = '/admin-access.html';
+        }
+        
+        // ==================== AUTO-REFRESH ====================
+        function startAutoRefresh() {
+            // Refresh data every 30 seconds
+            refreshInterval = setInterval(() => {
+                const activeSection = document.querySelector('.content-section.active');
+                if (activeSection) {
+                    const sectionName = activeSection.id.replace('section-', '');
+                    if (sectionName === 'dashboard') {
+                        loadDashboardStats();
+                    }
+                }
+            }, 30000);
+        }
+        
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+        
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🔐 Admin Dashboard Loading...');
+            
+            // Check authentication
+            const isAuthenticated = await checkAuth();
+            if (!isAuthenticated) return;
+            
+            console.log('✅ Admin authenticated successfully');
+            
+            // Add navigation event listeners
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const sectionName = this.id.replace('nav-', '');
+                    showSection(sectionName);
+                });
+            });
+            
+            // Load initial data
+            showSection('dashboard');
+            
+            // Start auto-refresh
+            startAutoRefresh();
+            
+            console.log('🎉 Admin Dashboard loaded successfully!');
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            stopAutoRefresh();
+        });
+    </script>
+</body>
+</html>

@@ -31,6 +31,8 @@ public class RideRequest {
 
     private String vehicleModel;
     private String vehiclePlate;
+    private String contactNumber;
+    private String notes;
 
     @Min(value = 1, message = "Price per km must be positive")
     private Double pricePerKm;
@@ -62,4 +64,10 @@ public class RideRequest {
 
     public Double getPricePerKm() { return pricePerKm; }
     public void setPricePerKm(Double pricePerKm) { this.pricePerKm = pricePerKm; }
+
+    public String getContactNumber() { return contactNumber; }
+    public void setContactNumber(String contactNumber) { this.contactNumber = contactNumber; }
+
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 }

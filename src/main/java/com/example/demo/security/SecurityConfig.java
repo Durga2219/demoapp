@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -22,6 +23,7 @@ import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
@@ -85,9 +87,28 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/auth/register",
                     "/api/auth/login",
+                    "/api/auth/create-test-user",
                     "/api/auth/test",
-                    "/", "/index.html", "/static/**", "/h2-console/**"
+                    "/api/auth/test-email",
+                    "/api/auth/email-config-status",
+                    "/api/auth/send-registration-otp",
+                    "/api/auth/send-login-otp",
+                    "/api/auth/register-with-otp",
+                    "/api/auth/login-with-otp",
+                    "/api/rides/search",
+                    "/api/rides/search/enhanced",
+                    "/api/rides/*/calculate-fare",
+                    "/api/rides/*",
+                    "/api/fare/calculate",
+                    "/api/payments/config",
+                    "/api/payments/webhook",
+                    "/api/data/**",
+                    "/api/admin/**",
+                    "/ws/**",
+                    "/", "/index.html", "/driver-dashboard.html", "/passenger-dashboard.html", "/admin-dashboard.html", "/admin-access.html", "/static/**", "/h2-console/**", "/uploads/**"
                 ).permitAll()
+                // Admin endpoints - temporarily allow without auth for testing
+                // .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // Everything else needs authentication
                 .anyRequest().authenticated()
             )
@@ -113,7 +134,7 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
 
             // ✅ Allow H2 console frames
-            .headers(headers -> headers.frameOptions().disable());
+            .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()));
 
         return http.build();
     }

@@ -10,6 +10,13 @@ public class AuthResponse {
     private String email;
     private String name;
     private Role role;
+    
+    // Vehicle details for drivers
+    private String vehicleModel;
+    private String vehiclePlate;
+    private Integer vehicleCapacity;
+    private String profilePicture;
+    private String redirectUrl;
 
     public AuthResponse(String token, Long id, String username, String email, String name, Role role) {
         this.token = token;
@@ -18,6 +25,21 @@ public class AuthResponse {
         this.email = email;
         this.name = name;
         this.role = role;
+    }
+    
+    // Constructor with vehicle details
+    public AuthResponse(String token, Long id, String username, String email, String name, Role role,
+                       String vehicleModel, String vehiclePlate, Integer vehicleCapacity, String profilePicture) {
+        this.token = token;
+        this.id = id;
+        this.username = username;
+        this.email = email;
+        this.name = name;
+        this.role = role;
+        this.vehicleModel = vehicleModel;
+        this.vehiclePlate = vehiclePlate;
+        this.vehicleCapacity = vehicleCapacity;
+        this.profilePicture = profilePicture;
     }
 
     // Getters only for final field
@@ -40,4 +62,19 @@ public class AuthResponse {
 
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
+    
+    public String getVehicleModel() { return vehicleModel; }
+    public void setVehicleModel(String vehicleModel) { this.vehicleModel = vehicleModel; }
+    
+    public String getVehiclePlate() { return vehiclePlate; }
+    public void setVehiclePlate(String vehiclePlate) { this.vehiclePlate = vehiclePlate; }
+    
+    public Integer getVehicleCapacity() { return vehicleCapacity; }
+    public void setVehicleCapacity(Integer vehicleCapacity) { this.vehicleCapacity = vehicleCapacity; }
+    
+    public String getProfilePicture() { return profilePicture; }
+    public void setProfilePicture(String profilePicture) { this.profilePicture = profilePicture; }
+    
+    public String getRedirectUrl() { return redirectUrl; }
+    public void setRedirectUrl(String redirectUrl) { this.redirectUrl = redirectUrl; }
 }

@@ -34,8 +34,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // ✅ Skip JWT validation for public endpoints (login, register, test, home)
-        if (path.startsWith("/api/auth/") ||
+        // ✅ Skip JWT validation ONLY for public auth endpoints
+        // These endpoints do NOT need authentication:
+        if (path.equals("/api/auth/register") ||
+            path.equals("/api/auth/login") ||
+            path.equals("/api/auth/create-test-user") ||
+            path.equals("/api/auth/test") ||
+            path.equals("/api/auth/test-email") ||
+            path.equals("/api/auth/email-config-status") ||
+            path.equals("/api/auth/send-registration-otp") ||
+            path.equals("/api/auth/send-login-otp") ||
+            path.equals("/api/auth/register-with-otp") ||
+            path.equals("/api/auth/login-with-otp") ||
             path.equals("/") ||
             path.startsWith("/h2-console/") ||
             path.contains("swagger") ||
@@ -43,6 +53,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
+        
+        // All other /api/auth/* endpoints (profile, update-profile, etc.) REQUIRE authentication
 
         final String authHeader = request.getHeader("Authorization");
 
@@ -63,14 +75,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Role role = Role.valueOf(jwtUtil.extractRole(token));
 
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                // 🔧 Create a User object with all necessary fields
                 User user = new User();
                 user.setId(userId);
                 user.setUsername(username);
+                user.setEmail(username); // ✅ Also set email (username could be email)
                 user.setRole(role);
 
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
-                                user,
+                                user, // ✅ User object is now the principal
                                 null,
                                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role.name()))
                         );

@@ -1,0 +1,15 @@
+package com.example.demo.entity;
+
+public enum NotificationType {
+    BOOKING_CONFIRMATION,
+    RIDE_REMINDER,
+    RIDE_CANCELLED,
+    RIDE_RESCHEDULED,
+    PAYMENT_SUCCESS,
+    PAYMENT_FAILED,
+    DRIVER_ASSIGNED,
+    RIDE_COMPLETED,
+    REVIEW_RECEIVED,
+    REVIEW_REQUEST,
+    GENERAL
+}

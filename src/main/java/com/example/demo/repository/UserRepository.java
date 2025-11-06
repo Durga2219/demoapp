@@ -55,6 +55,28 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE LOWER(u.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     List<User> searchByName(@Param("name") String name);
 
-    @Query(value = "SELECT * FROM app_users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) ORDER BY created_at DESC", nativeQuery = true)
+    @Query(value = "SELECT * FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) ORDER BY created_at DESC", nativeQuery = true)
     List<User> findRecentUsers();
+
+    // ==================== ADMIN QUERIES ====================
+    
+    @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt > :date")
+    long countByCreatedAtAfter(@Param("date") java.time.LocalDateTime date);
+    
+    @Query("SELECT u FROM User u ORDER BY u.createdAt DESC")
+    List<User> findTop5ByOrderByCreatedAtDesc();
+    
+    // ==================== ADMIN MANAGEMENT METHODS ====================
+    
+    boolean existsByRole(Role role);
+    long countByBlockedFalse();
+    long countByBlockedTrue();
+    
+    List<User> findByUsernameContainingOrEmailContainingOrNameContaining(String username, String email, String name);
+    
+    @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt BETWEEN :start AND :end")
+    long countByCreatedAtBetween(@Param("start") java.time.LocalDateTime start, @Param("end") java.time.LocalDateTime end);
+    
+    @Query("SELECT u FROM User u WHERE u.role = 'DRIVER' ORDER BY u.totalRides DESC")
+    List<User> findTopDriversByRides(@Param("limit") int limit);
 }
